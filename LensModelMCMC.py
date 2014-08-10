@@ -4,7 +4,7 @@ import scipy.sparse.linalg
 import emcee
 from Model_objs import *
 from GenerateLensingGrid import GenerateLensingGrid
-from calc_likelihood import calc_likelihood
+from calc_likelihood import calc_vis_lnlike
 import astropy.cosmology as ac
 ac.set_current(ac.FlatLambdaCDM(H0=71.,Om0=0.2669))
 #ac.set_current(ac.WMAP9)
@@ -162,7 +162,7 @@ def LensModelMCMC(data,lens,source,shear=None,
       initials = emcee.utils.sample_ball(p0,np.asarray([0.1*x if x else 0.05 for x in p0]),int(nwalkers))
 
       # Create the sampler object; uses calc_likelihood function defined elsewhere
-      lenssampler = emcee.EnsembleSampler(nwalkers,ndim,calc_likelihood,
+      lenssampler = emcee.EnsembleSampler(nwalkers,ndim,calc_vis_lnlike,
             args = [data,lens,source,shear,Dd,Ds,Dds,kmax,
                     xmap,ymap,xemit,yemit,indices,
                     sourcedatamap,scaleamp,shiftphase,modelcal],
