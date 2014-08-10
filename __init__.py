@@ -5,9 +5,10 @@ from RayTracePixels import *
 from SourceProfile import SourceProfile
 from GenerateLensingGrid import GenerateLensingGrid
 from LensModelMCMC import LensModelMCMC
+from ImageModelMCMC import ImageModelMCMC
 from uvimage import uvimageslow
 from triangleplot import TrianglePlot_MCMC
-from calc_likelihood import calc_likelihood
+from calc_likelihood import *
 from modelcal import model_cal
 __all__ = ['Visdata','Model_objs','utils',
       'RayTracePixels','SourceProfile',
