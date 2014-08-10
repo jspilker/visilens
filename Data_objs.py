@@ -103,33 +103,35 @@ class ImageData(object):
       If you don't pass a noise map, one will be created as sqrt(data).
       """
 
-      def __init__(self,x,y,data,sigma=None,mask=None):
-            if sigma is None:
-                  sigma = np.sqrt(np.abs(np.asarray(data)))
+      def __init__(self,x,y,data,header=None,sigma=None,mask=None,filename=None):
+            if noisemap is None:
+                  noisemap = np.sqrt(np.abs(np.asarray(data)))
 
             if mask is None:
                   mask = np.zeros(x.shape)
 
             self.x = np.asarray(x)
             self.y = np.asarray(y)
+            self.header = header
             self.data = np.asarray(data)
-            self.simga = np.asarray(sigma)
+            self.noisemap = np.asarray(noisemap)
             self.mask = np.asarray(mask)
+            self.filename = filename
 
       def __add__(self,other):
             if isinstance(other,ImageData):
-                  return ImageData(self.x,self.y,self.data+other.data,self.sigma,self.mask)
-            else: return ImageData(self.x,self.y,self.data+other,self.sigma,self.mask)
+                  return ImageData(self.x,self.y,self.data+other.data,self.header,self.sigma,self.mask,self.filename)
+            else: return ImageData(self.x,self.y,self.data+other,self.header,self.sigma,self.mask,self.filename)
 
       def __subtract__(self,other):
             if isinstance(other,ImageData):
-                  return ImageData(self.x,self.y,self.data-self.other,self.sigma,self.mask)
-            else: return ImageData(self.x,self.y,self.data-other,self.sigma,self.mask)
+                  return ImageData(self.x,self.y,self.data-self.other,self.header,self.sigma,self.mask,self.filename)
+            else: return ImageData(self.x,self.y,self.data-other,self.header,self.sigma,self.mask,self.filename)
 
       def __mul__(self,other):
             if isinstance(other,ImageData):
-                  return ImageData(self.x,self.y,self.data*self.other,self.sigma,self.mask)
-            else: return ImageData(self.x,self.y,self.data*other,self.sigma,self.mask)
+                  return ImageData(self.x,self.y,self.data*self.other,self.header,self.sigma,self.mask,self.filename)
+            else: return ImageData(self.x,self.y,self.data*other,self.header,self.sigma,self.mask,self.filename)
 
       def __div__(self,other):
             if isinstance(other,ImageData):
