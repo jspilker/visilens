@@ -1,10 +1,11 @@
 import numpy as np
+from Data_objs import *
 arcsec2rad = np.pi/(180.*3600.)
 rad2arcsec =3600.*180./np.pi
 deg2rad = np.pi/180.
 rad2deg = 180./np.pi
 
-def GenerateLensingGrid(visdata,xmax,emissionbox,fieldres=None,emitres=None):
+def GenerateLensingGrid(data=None,xmax=None,emissionbox=[-5,5,-5,5],fieldres=None,emitres=None):
       """
       Routine to generate two grids for lensing. The first will be a lower-resolution
       grid with resolution determined by fieldres and size determined
@@ -20,22 +21,24 @@ def GenerateLensingGrid(visdata,xmax,emissionbox,fieldres=None,emitres=None):
       the synthesized beam.
 
       Inputs:
-      visdata:
-            A visdata object, used to determine the resolutions of the two grids (based
-            on the maximum uvdistance in the dataset)
+      data:
+            Either a Visdata or ImageData object, used to determine the resolutions of 
+            the two grids (based on the image size or maximum uvdistance in the dataset)
       xmax:
             Field size for the low-resolution grid in arcsec, which will extend from
             (-xmax,-xmax) to (+xmax,+xmax), e.g. (-30,-30) to (+30,+30)arcsec. Should be
-            at least a bit bigger than the primary beam.
+            at least a bit bigger than the primary beam. Not needed for images.
       emissionbox:
             A 1x4 list of [xmin,xmax,ymin,ymax] defining a box (in arcsec) which contains
             the source emission.  Coordinates should be given in arcsec relative to the
-            pointing center.
+            pointing/image center.
       fieldres,emitres:
             Resolutions of the coarse, full-field and fine (lensed) field, in arcsec.
             If not given, suitable values will be calculated from the visibilities.
+            fieldres is unnecessary for images.
 
       Returns:
+      If there are any Visdata objects in the datasets, returns:
       xmapfield,ymapfield:
             2xN matrices containing x and y coordinates for the full-field, lower-resolution
             grid, in arcsec.
@@ -45,6 +48,10 @@ def GenerateLensingGrid(visdata,xmax,emissionbox,fieldres=None,emitres=None):
       indices:
             A [4x1] array containing the indices of xmapfield,ymapfield which overlap with
             the high resolution grid.
+      
+      For any ImageData objects, returns nothing, but places additional attributes in each
+      image, corresponding to xmapemission,ymapemission, and indices (this lets us do this
+      for images with different native resolutions).
       """
 
       # Factors higher-resolution than (1/2*max(uvdist)) to make the field and emission grids
@@ -54,10 +61,10 @@ def GenerateLensingGrid(visdata,xmax,emissionbox,fieldres=None,emitres=None):
       # Allow multiple visdata objects to be passed, pick the highest resolution point of all
       uvmax = 0.
       try:
-            for vis in visdata:
+            for vis in data:
                   uvmax = max(uvmax,vis.uvdist.max())
       except TypeError:
-            uvmax = visdata.uvdist.max()
+            uvmax = data.uvdist.max()
 
       # Calculate resolutions of the grids
       if fieldres is None: fieldres = (2*Nover_field*uvmax)**-1.
@@ -66,33 +73,33 @@ def GenerateLensingGrid(visdata,xmax,emissionbox,fieldres=None,emitres=None):
       else: emitres *= arcsec2rad
 
       # Calculate the field grid size as a power of 2.
-      NFFT = 2**np.ceil(np.log2(2*np.abs(xmax)*arcsec2rad/fieldres))
+      Nfield = 2**np.ceil(np.log2(2*np.abs(xmax)*arcsec2rad/fieldres))
       #print NFFT
 
       # Calculate the grid coordinates for the larger field.
-      fieldcoords = np.linspace(-np.abs(xmax),np.abs(xmax),NFFT)
+      fieldcoords = np.linspace(-np.abs(xmax),np.abs(xmax),Nfield)
       xmapfield,ymapfield = np.meshgrid(fieldcoords,fieldcoords)
 
       # Calculate the indices where the high-resolution lensing grid meets the larger field grid
-      indices = np.round(np.interp(np.asarray(emissionbox),fieldcoords,np.arange(NFFT)))
+      indices = np.round(np.interp(np.asarray(emissionbox),fieldcoords,np.arange(Nfield)))
 
       # Calculate the grid coordinates for the high-res lensing grid; the grids should meet at indices
-      #Nemx = 1 + np.abs(indices[1]-indices[0])*np.ceil((fieldcoords[1]-fieldcoords[0])/(emitres*rad2arcsec))
-      #Nemy = 1 + np.abs(indices[3]-indices[2])*np.ceil((fieldcoords[1]-fieldcoords[0])/(emitres*rad2arcsec))
-      #xemcoords = np.linspace(fieldcoords[indices[0]],fieldcoords[indices[1]],Nemx)
-      #yemcoords = np.linspace(fieldcoords[indices[2]],fieldcoords[indices[3]],Nemy)
-      #xmapemission,ymapemission = np.meshgrid(xemcoords,yemcoords)
-
-      # Below verbatim reproduces yashar's grid
-      Nemx = 1 + np.abs(indices[1]-indices[0])*np.ceil((fieldcoords[1]-fieldcoords[0])/(2*emitres*rad2arcsec))
-      Nemy = 1 + np.abs(indices[3]-indices[2])*np.ceil((fieldcoords[1]-fieldcoords[0])/(2*emitres*rad2arcsec))
+      Nemx = 1 + np.abs(indices[1]-indices[0])*np.ceil((fieldcoords[1]-fieldcoords[0])/(emitres*rad2arcsec))
+      Nemy = 1 + np.abs(indices[3]-indices[2])*np.ceil((fieldcoords[1]-fieldcoords[0])/(emitres*rad2arcsec))
       xemcoords = np.linspace(fieldcoords[indices[0]],fieldcoords[indices[1]],Nemx)
       yemcoords = np.linspace(fieldcoords[indices[2]],fieldcoords[indices[3]],Nemy)
       xmapemission,ymapemission = np.meshgrid(xemcoords,yemcoords)
-      xmapemission -= (xmapemission[0,1]-xmapemission[0,0])
-      ymapemission -= abs((ymapemission[1,0]-ymapemission[0,0]))
-      xmapemission -= 4.65484e-5 # i have no idea where this miniscule offset comes from
-      ymapemission -= 4.65484e-5
+
+      # Below verbatim reproduces yashar's grid
+      #Nemx = 1 + np.abs(indices[1]-indices[0])*np.ceil((fieldcoords[1]-fieldcoords[0])/(2*emitres*rad2arcsec))
+      #Nemy = 1 + np.abs(indices[3]-indices[2])*np.ceil((fieldcoords[1]-fieldcoords[0])/(2*emitres*rad2arcsec))
+      #xemcoords = np.linspace(fieldcoords[indices[0]],fieldcoords[indices[1]],Nemx)
+      #yemcoords = np.linspace(fieldcoords[indices[2]],fieldcoords[indices[3]],Nemy)
+      #xmapemission,ymapemission = np.meshgrid(xemcoords,yemcoords)
+      #xmapemission -= (xmapemission[0,1]-xmapemission[0,0])
+      #ymapemission -= abs((ymapemission[1,0]-ymapemission[0,0]))
+      #xmapemission -= 4.65484e-5 # i have no idea where this miniscule offset comes from
+      #ymapemission -= 4.65484e-5
 
 
       return xmapfield,ymapfield,xmapemission,ymapemission,indices
