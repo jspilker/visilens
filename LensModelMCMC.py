@@ -180,21 +180,23 @@ def LensModelMCMC(data,lens,source,shear=None,
       lenssampler.run_mcmc(pos,nstep,rstate0=rstate)
       print "Mean acceptance fraction: ",np.mean(lenssampler.acceptance_fraction)
 
+      # Package up the magnifications and modelcal phases; disregards nan points (where
+      # we failed the prior, usu. because a periodic angle wrapped).
       blobs = lenssampler.blobs
-      #mus = np.asarray([[a[0] for a in l] for l in blobs]).flatten()
-      #colnames.append('mu')
-      #dphases = np.asarray([[a[1] for a in l] for l in blobs]).reshape(nwalkers*nstep,len(data),-1)
-      #dphases = np.squeeze(dphases)
+      mus = np.asarray([[a[0] for a in l] for l in blobs]).flatten(order='F')
+      bad = np.asarray([np.isnan(m) for m in us],dtype=bool).flatten()
+      colnames.append('mu'
+
 
       # Assemble the output. Want to return something that contains both the MCMC chains
       # themselves, but also metadata about the run.
       mcmcresult = {}
 
-      try: # keep track of mercurial revision, for reproducibility's sake
+      try: # keep track of git revision, for reproducibility's sake
             import subprocess
-            mcmcresult['hghash'] = subprocess.check_output('hg id -i',shell=True).rstrip()
+            mcmcresult['githash'] = subprocess.check_output('git rev-parse HEAD',shell=True).rstrip()
       except:
-            mcmcresult['hghash'] = 'None'
+            mcmcresult['githash'] = 'No repo found'
 
       mcmcresult['datasets'] = [dset.filename for dset in data] # Data files used
 
@@ -204,16 +206,21 @@ def LensModelMCMC(data,lens,source,shear=None,
 
       if sourcedatamap: mcmcresult['sourcedatamap'] = sourcedatamap
 
-      #mcmcresult['chains'] = np.core.records.fromarrays(np.c_[lenssampler.flatchain,mus].T,names=colnames)
-      mcmcresult['chains'] = np.core.records.fromarrays(np.c_[lenssampler.flatchain].T,names=colnames)
+      mcmcresult['chains'] = np.core.records.fromarrays(np.c_[lenssampler.flatchain[~bad],mus[~bad]].T,names=colnames)
+      #mcmcresult['chains'] = np.core.records.fromarrays(np.c_[lenssampler.flatchain].T,names=colnames)
       mcmcresult['lnlike'] = lenssampler.flatlnprobability
 
 
-      #if any(modelcal): mcmcresult['modelcal'] = {}
-      #for i in range(len(data)):
-      #      if modelcal[i]: mcmcresult['modelcal']['phases_dset'+str(i)] = np.vstack(dphases[:,i])
+      if any(modelcal): 
+            mcmcresult['modelcal'] = {}
+            dp = np.squeeze(np.asarray([[a[1] for a in l if ~np.isnan(a[0])] for l in blobs]))
+            dphases = np.squeeze(np.reshape(dp,(nwalkers*nstep,len(data),-1),order='F'))
+            if len(data) > 1: 
+                  for i in range(len(data)):
+                        if modelcal[i]: mcmcresult['modelcal']['phases_dset'+str(i)] = np.vstack(dphases[:,i])
+            else: 
+                  if any(modelcal): mcmcresult['modelcal']['phases_dset0'] = dphases
 
       return mcmcresult,lenssampler.flatchain,lenssampler.blobs,colnames
       #return lenssampler.flatchain,lenssampler.blobs,colnames
 
-            
