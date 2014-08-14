@@ -182,7 +182,7 @@ def calc_im_lnlike_galfit(p,image,sigma,psf,lens,source,shear,
 
             # Two arrays, one of the lensed sources, the other the full field and any unlensed sources
       imsrc = np.zeros(image.xemit.shape)
-      immap = np.zeros(image.xmap.shape)
+      immap = np.zeros(image.x.shape)
 
       for j,src in enumerate(thissource):
             if thissource.lensed: 
@@ -194,8 +194,8 @@ def calc_im_lnlike_galfit(p,image,sigma,psf,lens,source,shear,
                         if isinstance(src,GaussSource): # a symmetric gaussian
                               f.write('0) gaussian\n')
                               # Calculate source position in pixels, galfit measures origin at image lower left(?)
-                              xloc = (src.xoff['value']+thislens.x['value']-image.xmap.min()) / (image.xmap[0,1]-image.xmap[0,0])
-                              yloc = (src.yoff['value']+thislens.y['value']-image.ymap.min()) / (image.ymap[1,0]-image.ymap[0,0])
+                              xloc = (src.xoff['value']+thislens.x['value']-image.x.min()) / (image.x[0,1]-image.x[0,0])
+                              yloc = (src.yoff['value']+thislens.y['value']-image.y.min()) / (image.y[1,0]-image.y[0,0])
                               varx = s
                               f.write('1) {0:.1f} {1:.1f} {2:.0f} {3:.0f}'.format(xloc,yloc,int(src.xoff['fixed']),int(src.yoff['fixed'])))
                               # Add in "total magnitude" - Jingzhe, I don't know what this means exactly...
@@ -220,7 +220,7 @@ def calc_im_lnlike_galfit(p,image,sigma,psf,lens,source,shear,
 
       # Okay, now we have our lensed emission model, let's convolve it with the PSF
       # and subtract from the data before sending to galfit
-      imconv = convolve(immap,psf,mode='constant')
+      imconv = convolve(immap*(image.x[0,1]-image.x[0,0])**2.,psf,mode='constant')
       image.data -= imconv
       image.writeto('galfit_input.fits')
       
