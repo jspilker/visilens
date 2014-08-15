@@ -9,18 +9,19 @@ from astropy.cosmology import get_current,set_current
 set_current('WMAP9')
 cosmo = get_current()
 
-xim = np.arange(-2,2,.015)
-yim = np.arange(-2,2,.015)
+xim = np.arange(-3,3,.015)
+yim = np.arange(-3,3,.015)
 
 xim,yim = np.meshgrid(xim,yim)
 
 zLens,zSource = 0.8,5.656
-xLens,yLens = 0.,0.
-MLens,eLens,PALens = 2.95e11,0.566,86.89
-xSource,ySource = 0.203,0.289
-FSource,sSource = 0.023,0.097
+xLens,yLens = 0.224,-0.368
+MLens,eLens,PALens = 2.868e11,0.552,180-92.728
+#xSource,ySource,FSource,sSource = 0.228,0.413,0.023,0.247
+xSource,ySource,FSource,sSource = 0.090,0.141,0.0185,0.111
 
 
+"""
 zLens,zSource = 0.8, 5.65
 xLens,yLens = 0.,0.
 MLens,eLens,PALens = 3e11,0.25,40
@@ -38,7 +39,7 @@ FSblue,sSblue = 0.273e-3,0.148
 xSred,ySred = 0.051,0.182
 FSred,sSred = 0.176e-3, 0.097
 #xSource,ySource, sSource = xSred,ySred,sSred
-
+"""
 
 Lens = SIELens(zLens,xLens,yLens,MLens,eLens,PALens)
 Source = GaussSource(zSource,xSource,ySource,FSource,sSource)
