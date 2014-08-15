@@ -109,7 +109,7 @@ def LensModelMCMC(data,lens,source,shear=None,
                         if not vars(src)[key]['fixed']:
                               ndim += 1
                               p0.append(vars(src)[key]['value'])
-                              colnames.append(key+'S'+str(i))
+                              colnames.append(key+'S'+str(i))                         
       # Then shear
       if shear is not None:
             for key in ['shear','shearangle']:
