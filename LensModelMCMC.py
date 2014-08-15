@@ -109,7 +109,6 @@ def LensModelMCMC(data,lens,source,shear=None,
                         if not vars(src)[key]['fixed']:
                               ndim += 1
                               p0.append(vars(src)[key]['value'])
-                              colnames.append(vars(src)[key]['value'])
                               colnames.append(key+'S'+str(i))                         
       # Then shear
       if shear is not None:
@@ -193,6 +192,7 @@ def LensModelMCMC(data,lens,source,shear=None,
       mus = np.asarray([[a[0] for a in l] for l in blobs]).flatten(order='F')
       bad = np.asarray([np.isnan(m) for m in mus],dtype=bool).flatten()
       colnames.append('mu')
+
 
       # Assemble the output. Want to return something that contains both the MCMC chains
       # themselves, but also metadata about the run.

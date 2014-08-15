@@ -81,7 +81,7 @@ def calc_vis_lnlike(p,data,lens,source,shear,
                         else: immap += SourceProfile(xmap,ymap,thissource[jsrc],thislens); mags[jsrc] = 1.
             else: # Assume we fit all sources to this dataset
                   for j,src in enumerate(thissource):
-                        if thissource.lensed: 
+                        if src.lensed: 
                               ims = SourceProfile(xsrc,ysrc,src,thislens)
                               imsrc += ims
                               mags[j] = ims.sum()*(xemit[0,1]-xemit[0,0])**2./src.flux['value']
@@ -202,7 +202,7 @@ def calc_im_lnlike_galfit(p,image,sigma,psf,lens,source,shear,
                               f.write('2) {0:.3f} {1:.0f}'.format(src.flux['value'],int(src.flux['fixed'])))
                               # And the source FWHM
                               fwhmpix = (2*np.sqrt(2*np.log(2))*src.width['value'])/(image.xmap[0,1]-image.xmap[0,0])
-                              f.write('3) {0:.3f} {1:.0f}'.format(fwhmpix,int(src.width['fixed']))
+                              f.write('3) {0:.3f} {1:.0f}'.format(fwhmpix,int(src.width['fixed'])))
                               # the rest we can just do; it's a circular gaussian
                               # not sure what the Z) row is actually doing....
                               f.write('9) 1.0 0\n10) 0.0 0\nZ) 0')
