@@ -10,7 +10,6 @@ ac.set_current(ac.FlatLambdaCDM(H0=71.,Om0=0.2669))
 #ac.set_current(ac.WMAP9)
 cosmo = ac.get_current()
 arcsec2rad = np.pi/180/3600
-deg2arcsec = 
 
 def ImageModelMCMC(image,psf,sigma,lens,source,shear=None,
                   highresbox=[-3.,3.,-3.,3.],emitres=None,
@@ -153,8 +152,8 @@ def ImageModelMCMC(image,psf,sigma,lens,source,shear=None,
 
       # Create the sampler object; uses calc_likelihood function defined elsewhere
       lenssampler = emcee.EnsembleSampler(nwalkers,ndim,calc_im_lnlike_galfit,
-            args = [image,sigma.data,psf.data,lens,source,shear,Dd,Ds,Dds,
-                    TODO: GALFIT PARAMS HERE?],
+            args = [image,sigma.data,psf.data,lens,source,shear,Dd,Ds,Dds],
+                    #TODO: GALFIT PARAMS HERE?],
             threads=nthreads)
       
       # Run burn-in phase
