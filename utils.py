@@ -6,7 +6,7 @@ import copy
 from Data_objs import Visdata
 arcsec2rad = np.pi/180/3600.
 
-__all__ = ['read_visdata','cart2pol','pol2cart','concatvis','bin_visibilities',\
+__all__ = ['read_visdata','read_image','cart2pol','pol2cart','concatvis','bin_visibilities',\
             'expsinc','box']
 
 def read_visdata(filename):
@@ -35,7 +35,35 @@ def read_visdata(filename):
       data = data[:-1]
       data = data.reshape(7,data.size/7) # bin files lose array shape, so reshape to match
 
-      return Visdata(*data,PBfwhm=PBfwhm,filename=filename) # uses the "splat" operator to auto-expand data into the *args of visdata
+      return Visdata(*data,PBfwhm=PBfwhm,filename=filename)
+
+def read_image(image,psf,noisemap=None,mask=None):
+      """
+      Function to read in an image and create an ImageData object to hold it.
+      
+      Params:
+      image 
+            numpy array, or name of .fits file to read from. Contains the actual image.
+      
+      psf
+            numpy array, or name of .fits file to read from. Contains PSF image.
+      
+      noisemap
+            numpy array, or name of .fits file to read from. An optional error map
+            on the image data.  If None, the ImageData noisemap is initialized to be
+            sqrt(image).
+      
+      mask
+             numpy array, or name of .fits file to read from. An optional pixel
+             mask. Should be same size as image, where non-zero values will be
+             considered bad/masked. If None, initialized as zeros (no mask).
+            
+      Returns:
+      ImageData
+            An ImageData object.
+      """
+      
+      return None
 
 def cart2pol(x,y):
     """
@@ -102,7 +130,7 @@ def concatvis(visdatas):
 
 def bin_visibilities(visdata,maxnewsize=None):
       """
-      WARNING: DOESN'T WORK CURRENTLY.
+      WARNING: DOESN'T WORK CURRENTLY(?)
       Bins up (ie, averages down) visibilities to reduce the total
       number of them.  Note that since we fit directly to the visibilities,
       this is slightly different (and easier) than gridding in preparation for

@@ -4,7 +4,7 @@ import scipy.sparse.linalg
 import emcee
 from Model_objs import *
 from GenerateLensingGrid import GenerateLensingGrid
-from calc_likelihood import calc_likelihood
+from calc_likelihood import calc_vis_lnlike
 import astropy.cosmology as ac
 ac.set_current(ac.FlatLambdaCDM(H0=71.,Om0=0.2669))
 #ac.set_current(ac.WMAP9)
@@ -104,6 +104,13 @@ def LensModelMCMC(data,lens,source,shear=None,
                               ndim += 1
                               p0.append(vars(src)[key]['value'])
                               colnames.append(key+'S'+str(i))
+            elif isinstance(src,SersicSource):
+                  for key in ['xoff','yoff','flux','alpha','index','axisratio','PA']:
+                        if not vars(src)[key]['fixed']:
+                              ndim += 1
+                              p0.append(vars(src)[key]['value'])
+                              colnames.append(vars(src)[key]['value'])
+                              colnames.append(key+'S'+str(i))                         
       # Then shear
       if shear is not None:
             for key in ['shear','shearangle']:
@@ -162,7 +169,7 @@ def LensModelMCMC(data,lens,source,shear=None,
       initials = emcee.utils.sample_ball(p0,np.asarray([0.1*x if x else 0.05 for x in p0]),int(nwalkers))
 
       # Create the sampler object; uses calc_likelihood function defined elsewhere
-      lenssampler = emcee.EnsembleSampler(nwalkers,ndim,calc_likelihood,
+      lenssampler = emcee.EnsembleSampler(nwalkers,ndim,calc_vis_lnlike,
             args = [data,lens,source,shear,Dd,Ds,Dds,kmax,
                     xmap,ymap,xemit,yemit,indices,
                     sourcedatamap,scaleamp,shiftphase,modelcal],
@@ -187,16 +194,15 @@ def LensModelMCMC(data,lens,source,shear=None,
       bad = np.asarray([np.isnan(m) for m in mus],dtype=bool).flatten()
       colnames.append('mu')
 
-
       # Assemble the output. Want to return something that contains both the MCMC chains
       # themselves, but also metadata about the run.
       mcmcresult = {}
 
-      try: # keep track of mercurial revision, for reproducibility's sake
+      try: # keep track of git revision, for reproducibility's sake
             import subprocess
-            mcmcresult['hghash'] = subprocess.check_output('hg id -i',shell=True).rstrip()
+            mcmcresult['githash'] = subprocess.check_output('git rev-parse HEAD',shell=True).rstrip()
       except:
-            mcmcresult['hghash'] = 'None'
+            mcmcresult['githash'] = 'No repo found'
 
       mcmcresult['datasets'] = [dset.filename for dset in data] # Data files used
 
@@ -224,4 +230,3 @@ def LensModelMCMC(data,lens,source,shear=None,
       return mcmcresult,lenssampler.flatchain,lenssampler.blobs,colnames
       #return lenssampler.flatchain,lenssampler.blobs,colnames
 
-            
