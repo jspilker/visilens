@@ -12,10 +12,11 @@ from Data_objs import Visdata
 from modelcal import model_cal
 arcsec2rad = np.pi/180/3600
 
-__all__ = ['calc_vis_lnlike','calc_im_lnlike_galfit','pass_priors']
+__all__ = ['calc_vis_lnlike','calc_im_lnlike_galfit','pass_priors',
+            'create_modelimage','fft_interpolate']
 
 def calc_vis_lnlike(p,data,lens,source,shear,
-                    Dd,Ds,Dds,kmax,xmap,ymap,xemit,yemit,indices,
+                    Dd,Ds,Dds,ug,xmap,ymap,xemit,yemit,indices,
                     sourcedatamap=None,scaleamp=False,shiftphase=False,modelcal=True):
       """
       Calculates log-likelihood of the given parameters.
@@ -57,61 +58,18 @@ def calc_vis_lnlike(p,data,lens,source,shear,
       except TypeError: return -np.inf,[np.nan]
 
       # Ok, if we've made it this far we can do the actual likelihood calculation
-      ug = np.linspace(-kmax,kmax,xmap.shape[0])
-
-      # Do the raytracing for this set of lens & shear params
-      if isinstance(thislens,SIELens): xsrc,ysrc = RayTraceSIE(xemit,yemit,thislens,Dd,Ds,Dds,thisshear)
-
-      # Now loop through all the datasets, fitting the requested sources to each. We'll also calculate
+      # Loop through all the datasets, fitting the requested sources to each. We'll also calculate
       # magnifications for each source, defined as the sum of the output flux / input flux
-      # Thus, the returned magnification will be an array of length (# of unique sources)
-      lnL,mags,dphases = 0., np.zeros(len(thissource)),[[]]*len(data)
+      # Thus, the returned magnification will be an array of length (# of sources)
+      lnL,dphases = 0., [[]]*len(data)
       for i,dset in enumerate(data):
 
-            # Two arrays, one of the lensed sources, the other the full field and any unlensed sources
-            imsrc = np.zeros(xemit.shape)
-            immap = np.zeros(xmap.shape)
+            # Make a model of this field.
+            immap,mags = create_modelimage(thislens,thissource,thisshear,\
+                  xmap,ymap,xemit,yemit,indices,Dd,Ds,Dds,sourcedatamap)
 
-            if sourcedatamap is not None: # ... then particular source(s) are specified for each dataset
-                  for jsrc in sourcedatamap[i]:
-                        if thissource[jsrc].lensed: 
-                              ims = SourceProfile(xsrc,ysrc,thissource[jsrc],thislens)
-                              imsrc += ims
-                              mags[jsrc] = ims.sum()*(xemit[0,1]-xemit[0,0])**2./thissource[jsrc].flux['value']
-                        else: immap += SourceProfile(xmap,ymap,thissource[jsrc],thislens); mags[jsrc] = 1.
-            else: # Assume we fit all sources to this dataset
-                  for j,src in enumerate(thissource):
-                        if src.lensed: 
-                              ims = SourceProfile(xsrc,ysrc,src,thislens)
-                              imsrc += ims
-                              mags[j] = ims.sum()*(xemit[0,1]-xemit[0,0])**2./src.flux['value']
-                        else: immap += SourceProfile(xmap,ymap,thissource,thislens); mags[j] = 1.
-
-            # Try to reproduce matlab's antialiasing thing; this uses a 3lobe lanczos low-pass filter
-            imsrc = Image.fromarray(imsrc)
-            resize = np.array(imsrc.resize((int(indices[1]-indices[0]),int(indices[3]-indices[2])),Image.ANTIALIAS))
-            immap[indices[2]:indices[3],indices[0]:indices[1]] += resize
-
-            # Correct for PB attenuation            
-            if dset.PBfwhm is not None: 
-                  PBs = dset.PBfwhm / (2.*np.sqrt(2.*np.log(2)))
-                  immap *= np.exp(-(xmap**2./(2.*PBs**2.)) - (ymap**2./(2.*PBs**2.)))
-            
-            #immap = immap[::-1,:] # Fixes issue of origin in tlc vs blc to match sky coords  
-            imfft = fftshift(fft2(fftshift(immap*(xmap[0,1]-xmap[0,0])**2.)))
-            
-            # Interpolate the FFT'd image onto the data's uv points
-            # Using RBS, much faster since ug is gridded
-            spliner = RectBivariateSpline(ug,ug,imfft.real,kx=1,ky=1)
-            splinei = RectBivariateSpline(ug,ug,imfft.imag,kx=1,ky=1)
-            interpr = spliner.ev(dset.v,dset.u)
-            interpi = splinei.ev(dset.v,dset.u)
-            interpdata = Visdata(dset.u,dset.v,interpr,interpi,np.zeros(dset.u.size))
-
-            # Apply scaling, phase shifts; wrap phases to +/- pi.
-            interpdata.amp *= thisascale[i]
-            interpdata.phase += 2.*np.pi*arcsec2rad*(thispshift[i][0]*interpdata.u + thispshift[i][1]*interpdata.v)
-            interpdata.phase = (interpdata.phase + np.pi) % (2*np.pi) - np.pi
+            # ... and interpolate/sample it at our uv coordinates
+            interpdata = fft_interpolate(dset,immap,xmap,ymap,ug,thisascale[i],thispshift[i])            
 
             # If desired, do model-cal on this dataset
             if modelcal[i]:
@@ -318,4 +276,102 @@ def pass_priors(p,lens,source,shear,scaleamp,shiftphase):
             else: thispshift[i] = [0.,0.] # no shifting
             
       return thislens,thissource,thisshear,thisascale,thispshift
+
+
+def create_modelimage(lens,source,shear,xmap,ymap,xemit,yemit,indices,
+      Dd=None,Ds=None,Dds=None,sourcedatamap=None):
+      """
+      Creates a model lensed image given the objects and map
+      coordinates specified.  Supposed to be common for both
+      image fitting and visibility fitting, so we don't need
+      any data here.
+
+      Returns:
+      immap
+            A 2D array representing the field evaluated at
+            xmap,ymap with all sources included.
+      mus:
+            A numpy array of length N_sources containing the
+            magnifications of each source (1 if unlensed).
+      """
       
+      source = list(np.array([source]).flatten()) # Ensure source(s) are a list
+      mus = np.zeros(len(source))
+      immap, imsrc = np.zeros(xmap.shape), np.zeros(xemit.shape)
+
+      # If we didn't get pre-calculated distances, figure them here.
+      if np.any((Dd is None,Ds is None, Dds is None)):
+            import astropy.cosmology as ac
+            ac.set_current(ac.FlatLambdaCDM(H0=71.,Om0=0.2669))
+            cosmo = ac.get_current()
+            Dd = cosmo.angular_diameter_distance(lens.z).value
+            Ds = cosmo.angular_diameter_distance(source[0].z).value
+            Dds= cosmo.angular_diameter_distance_z1z2(lens.z,source[0].z).value
+
+      # Do the raytracing for this set of lens & shear params
+      if isinstance(lens,SIELens): xsrc,ysrc = RayTraceSIE(xemit,yemit,lens,Dd,Ds,Dds,shear)
+
+      if sourcedatamap is not None: # ... then particular source(s) are specified for this map
+            for jsrc in sourcedatamap[i]:
+                  if source[jsrc].lensed: 
+                        ims = SourceProfile(xsrc,ysrc,source[jsrc],lens)
+                        imsrc += ims
+                        mus[jsrc] = ims.sum()*(xemit[0,1]-xemit[0,0])**2./source[jsrc].flux['value']
+                  else: immap += SourceProfile(xmap,ymap,source[jsrc],lens); mus[jsrc] = 1.
+      else: # Assume we put all sources in this map/field
+            for j,src in enumerate(source):
+                  if src.lensed: 
+                        ims = SourceProfile(xsrc,ysrc,src,lens)
+                        imsrc += ims
+                        mus[j] = ims.sum()*(xemit[0,1]-xemit[0,0])**2./src.flux['value']
+                  else: immap += SourceProfile(xmap,ymap,src,lens); mus[j] = 1.
+
+      # Try to reproduce matlab's antialiasing thing; this uses a 3lobe lanczos low-pass filter
+      imsrc = Image.fromarray(imsrc)
+      resize = np.array(imsrc.resize((int(indices[1]-indices[0]),int(indices[3]-indices[2])),Image.ANTIALIAS))
+      immap[indices[2]:indices[3],indices[0]:indices[1]] += resize
+
+      # last, correct for pixel size.
+      immap *= (xmap[0,1]-xmap[0,0])**2.
+
+      return immap,mus
+
+def fft_interpolate(visdata,immap,xmap,ymap,ug=None,scaleamp=1.,shiftphase=[0.,0.]):
+      """
+      Take a dataset and a map of a field, fft the image,
+      and interpolate onto the uv-coordinates of the dataset.
+
+      Returns:
+      interpdata: Visdata object
+            A dataset which samples the given immap
+      """
+      
+      # Correct for PB attenuation            
+      if visdata.PBfwhm is not None: 
+            PBs = visdata.PBfwhm / (2.*np.sqrt(2.*np.log(2)))
+            immap *= np.exp(-(xmap**2./(2.*PBs**2.)) - (ymap**2./(2.*PBs**2.)))
+      
+      #immap = immap[::-1,:] # Fixes issue of origin in tlc vs blc to match sky coords  
+      imfft = fftshift(fft2(fftshift(immap)))
+      
+      # Calculate the uv points we need, if we don't already have them
+      if ug is None:
+            kmax = 0.5/((xmap[0,1]-xmap[0,0])*arcsec2rad)
+            ug = np.linspace(-kmax,kmax,xmap.shape[0])
+
+      # Interpolate the FFT'd image onto the data's uv points
+      # Using RBS, much faster since ug is gridded
+      spliner = RectBivariateSpline(ug,ug,imfft.real,kx=1,ky=1)
+      splinei = RectBivariateSpline(ug,ug,imfft.imag,kx=1,ky=1)
+      interpr = spliner.ev(visdata.v,visdata.u)
+      interpi = splinei.ev(visdata.v,visdata.u)
+      interpdata = Visdata(visdata.u,visdata.v,interpr,interpi,np.zeros(visdata.u.size))
+
+      # Apply scaling, phase shifts; wrap phases to +/- pi.
+      interpdata.amp *= scaleamp
+      interpdata.phase += 2.*np.pi*arcsec2rad*(shiftphase[0]*interpdata.u + shiftphase[1]*interpdata.v)
+      interpdata.phase = (interpdata.phase + np.pi) % (2*np.pi) - np.pi
+
+      return interpdata
+
+
