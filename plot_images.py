@@ -1,8 +1,13 @@
 import numpy as np
 import matplotlib.pyplot as pl
+import matplotlib.cm as cm
 from uvimage import uvimageslow
+from calc_likelihood import create_modelimage,fft_interpolate
+from modelcal import model_cal
+from GenerateLensingGrid import GenerateLensingGrid
 
-def plot_images(data,chains,**kwargs):
+def plot_images(data,chains,xmax=30.,highresbox=[-3.,3.,-3.,3.],emitres=None,fieldres=None,
+                  imsize=512,pixsize=0.2,taper=0.):
       """
       Create a four-panel figure from data and chains,
       showing data, best-fit model, residuals, high-res image.
@@ -10,57 +15,86 @@ def plot_images(data,chains,**kwargs):
       Inputs:
       data:
             The visdata object(s) to be imaged. If more than
-            one is passed, they'll be concatenated and imaged
-            jointly.
+            one is passed, they'll be imaged/differenced separately.
       chains:
             A result from running LensModelMCMC.
-      **kwargs:
-            Various keywork arguments are possible, most likely
-            are imsize and pixsize to be passed to imaging. Also
-            can pass extent=[xmin, xmax, ymin, ymax] to set axis
-            limits on the four plots.
 
       Returns:
       f, axarr:
             A matplotlib figure and array of Axes objects.
       """
 
-      imsize = kwargs.pop('imsize',512)
-      pixsize = kwargs.pop('pixsize',0.2)
-      extent = kwargs.pop('extent',
-            [-imsize*pixsize/2.,+imsize*pixsize/2.,-imsize*pixsize/2.,+imsize*pixsize/2.])
-
-      f,axarr = pl.subplots(1,4,figsize=(12,3))
+      limits = kwargs.pop('limits',
+            [-imsize*pixsize/2.,+imsize*pixsize/2.,imsize*pixsize/2.,-imsize*pixsize/2.])
+      cmap = kwargs.pop('cmap',cm.Greys)
 
       datasets = list(np.array([data]).flatten())
-      imdata = np.array(np.zeros(imsize,imsize),dtype=complex)      
-      for dset in datasets:
-            # Check to see if conjugate points already taken care of
-            if np.all(dset.u[:dset.u.size/2] == -dset.u[dset.u.size/2:]):
-                  imdata += uvimageslow(dset,imsize,pixsize)
-            else:
-                  imdata += 2.*(uvimageslow(dset,imsize,pixsize)).real
 
-      # Set up to create the model image... probably should have just made this
-      # its own routine instead of wrapping it up in calc_likelihood... ah well.
-      zL,zS = chains['lens_p0'].z, chains['source_p0'][0].z
-      xL,yL,ML = chains['chains']['xL'].mean(),chains['chains']['yL'].mean(),chains['chains']['ML'].mean()
-      eL,PAL = chains['chains']['eL'].mean(),chains['chains']['PAL'].mean()
-      lens = SIELens(zL,xL,yL,ML,eL,PAL)
-      source = []
-      for i,src in enumerate(chains['source_p0']):
+      # shorthand for later
+      c = chains['chains']
+
+      # Set up to create the model image. We'll assume the best-fit values are all the medians.
+      lens,source = chains['lens_p0'], chains['source_p0']
+      if isinstance(lens,SIELens):
+            for key in ['x','y','M','e','PA']:
+                  if not vars(lens)[key]['fixed']:
+                        lens.__dict__[key]['value'] = np.median(c[key+'L'])
+      # now do the source(s)
+      for i,src in enumerate(source): # Source is a list of source objects
             if isinstance(src,GaussSource):
-                  source.append(GaussSource(zS,chains['chains']['xoffS'+str(i)].mean(),
-                        chains['chains']['yoffS'+str(i)].mean(),chains['chains']['fluxS'+str(i)].mean(),
-                        chains['chains']['widthS'+str(i)].mean()))
+                  for key in ['xoff','yoff','flux','width']:
+                        if not vars(src)[key]['fixed']:
+                              src.__dict__[key]['value'] = np.median(c[key+'S'+str(i)])
+            elif isinstance(src,SersicSource):
+                  for key in ['xoff','yoff','flux','alpha','index','axisratio','PA']:
+                        if not vars(src)[key]['fixed']:
+                              src.__dict__[key]['value'] = np.median(c[key+'S'+str(i)])
+      
+      # now do shear, if any
+      if 'shear_p0' in mcmcresult.keys():
+            shear = mcmcresult['shear_p0']
+            for key in ['shear','shearangle']:
+                  if not vars(shear)[key]['fixed']:
+                        shear.__dict__[key]['value'] = np.median(c[key])
+      else: shear = None 
 
-      if 'shear' in chains['chains'].dtype.names:
-            shear = ExternalShear(chains['chains']['shear'].mean(),chains['chains']['shearangle'].mean())
-      else: shear = None
+      # Any amplitude scaling or astrometric shifts
+      scaleamp = np.ones(len(datasets))
+      if 'scaleamp' in mcmcresult.keys():
+            for i,t in enumerate(mcmcresult['scaleamp']): # only matters if >1 datasets
+                  if i==0: pass
+                  elif t: scaleamp[i] = np.median(c['ampscale_dset'+str(i+1)])
+                  else: pass
+      shiftphase = np.zeros((len(datasets),2))
+      if 'shiftphase' in mcmcresult.keys():
+            for i,t in enumerate(mcmcresult['shiftphase']):
+                  if i==0: pass # only matters if >1 datasets
+                  elif t:
+                        shiftphase[i][0] = np.median(c['astromshift_x_dset'+str(i+1)])
+                        shiftphase[i][1] = np.median(c['astromshift_y_dset'+str(i+1)])
+                  else: pass # no shifting
 
+      sourcedatamap = mcmcresult['sourcedatamap'] if 'sourcedatamap' in mcmcresult.keys() else None
+      modelcal = mcmcresult['modelcal'] if 'modelcal' in mcmcresult.keys() else [False]*len(datasets)
+
+      f,axarr = pl.subplots(len(datasets),4,figsize=(12,3*len(data)))
+      
+      for i,dset in enumerate(datasets):
+            # Get us some coordinates.
+            if isinstance(dset,Visdata):
+                  xmap,ymap,xemit,yemit,ix = GenerateLensingGrid(datasets,mcmcresult['xmax'],\
+                        mcmcresult['highresbox'],mcmcresult['fieldres'],mcmcresult['emitres'])
+            
+            # Create model image
+            immap,_ = create_modelimage(lens,source,shear,xmap,ymap,xemit,yemit,\
+                  ix,sourcedatamap)
+
+            # And interpolate onto uv-coords of dataset
+            interpdata = fft_interpolate(dset,immap,xmap,ymap,ug=None,\
+                  scaleamp=scaleamp[i],shiftphase=shiftphase[i])
+
+            if modelcal[i]: interpdata,_ = model_cal(dset,interpdata)
       
 
-def model_lens(data,lens,source,shear=None,imsize=256,pixsize=0.5,uvsample=False):
-      """
       
       
