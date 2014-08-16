@@ -141,11 +141,10 @@ def LensModelMCMC(data,lens,source,shear=None,
                   dPhi_dphi = np.zeros((uniqant.size-1,dset.u.size))
                   for j in range(1,uniqant.size):
                         dPhi_dphi[j-1,:]=(dset.ant1==uniqant[j])-1*(dset.ant2==uniqant[j])
-                  C = scipy.sparse.diags((dset.sigma/dset.amp)**2.,0)
-                  Cinv = scipy.sparse.linalg.inv(C)
-                  F = np.dot(dPhi_dphi,Cinv*dPhi_dphi.T)
+                  C = scipy.sparse.diags((dset.sigma/dset.amp)**-2.,0)
+                  F = np.dot(dPhi_dphi,C*dPhi_dphi.T)
                   Finv = np.linalg.inv(F)
-                  FdPC = np.dot(-Finv,dPhi_dphi*Cinv)
+                  FdPC = np.dot(-Finv,dPhi_dphi*C)
                   modelcal[i] = [dPhi_dphi,FdPC]
 
 
@@ -153,7 +152,11 @@ def LensModelMCMC(data,lens,source,shear=None,
       # recalculated with every call to the likelihood function
       xmap,ymap,xemit,yemit,indices = GenerateLensingGrid(data,xmax,highresbox,
                                                 fieldres,emitres)
+
+      # Calculate the uv coordinates we'll interpolate onto; only need to calculate
+      # this once, so do it here.
       kmax = 0.5/((xmap[0,1]-xmap[0,0])*arcsec2rad)
+      ug = np.linspace(-kmax,kmax,xmap.shape[0])
 
       # Calculate some distances; we only need to calculate these once.
       # This assumes multiple sources are all at same z; should be this
@@ -169,7 +172,7 @@ def LensModelMCMC(data,lens,source,shear=None,
 
       # Create the sampler object; uses calc_likelihood function defined elsewhere
       lenssampler = emcee.EnsembleSampler(nwalkers,ndim,calc_vis_lnlike,
-            args = [data,lens,source,shear,Dd,Ds,Dds,kmax,
+            args = [data,lens,source,shear,Dd,Ds,Dds,ug,
                     xmap,ymap,xemit,yemit,indices,
                     sourcedatamap,scaleamp,shiftphase,modelcal],
             threads=nthreads)
@@ -211,22 +214,28 @@ def LensModelMCMC(data,lens,source,shear=None,
       if shear: mcmcresult['shear_p0'] = shear
 
       if sourcedatamap: mcmcresult['sourcedatamap'] = sourcedatamap
+      mcmcresult['xmax'] = xmax
+      mcmcresult['highresbox'] = highresbox
+      mcmcresult['fieldres'] = fieldres
+      mcmcresult['emitres'] = emitres
+      if any(scaleamp): mcmcresult['scaleamp'] = scaleamp
+      if any(shiftphase): mcmcresult['shiftphase'] = shiftphase
 
       mcmcresult['chains'] = np.core.records.fromarrays(np.c_[lenssampler.flatchain[~bad],mus[~bad]].T,names=colnames)
-      #mcmcresult['chains'] = np.core.records.fromarrays(np.c_[lenssampler.flatchain].T,names=colnames)
       mcmcresult['lnlike'] = lenssampler.flatlnprobability
 
-
+      # If we did any modelcal stuff, keep the antenna phase offsets here
       if any(modelcal): 
-            mcmcresult['modelcal'] = {}
+            mcmcresult['modelcal'] = [True if j else False for j in modelcal]
             dp = np.squeeze(np.asarray([[a[1] for a in l if ~np.isnan(a[0])] for l in blobs]))
-            dphases = np.squeeze(np.reshape(dp,(nwalkers*nstep,len(data),-1),order='F'))
+            a = [x for l in dp for x in l] # Have to dick around with this if we had any nan's
+            dphases = np.squeeze(np.reshape(dp,(nwalkers*nstep-bad.sum(),len(data),-1),order='F'))
             if len(data) > 1: 
                   for i in range(len(data)):
-                        if modelcal[i]: mcmcresult['modelcal']['phases_dset'+str(i)] = np.vstack(dphases[:,i])
+                        if modelcal[i]: mcmcresult['calphases_dset'+str(i)] = np.vstack(dphases[:,i])
             else: 
-                  if any(modelcal): mcmcresult['modelcal']['phases_dset0'] = dphases
+                  if any(modelcal): mcmcresult['calphases_dset0'] = dphases
+      
 
       return mcmcresult,lenssampler.flatchain,lenssampler.blobs,colnames
-      #return lenssampler.flatchain,lenssampler.blobs,colnames
 
