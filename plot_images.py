@@ -1,4 +1,5 @@
 import numpy as np
+from astropy.stats import sigma_clip
 import matplotlib.pyplot as pl
 import matplotlib.cm as cm
 from uvimage import uvimageslow
@@ -27,6 +28,8 @@ def plot_images(data,chains,xmax=30.,highresbox=[-3.,3.,-3.,3.],emitres=None,fie
       limits = kwargs.pop('limits',
             [-imsize*pixsize/2.,+imsize*pixsize/2.,imsize*pixsize/2.,-imsize*pixsize/2.])
       cmap = kwargs.pop('cmap',cm.Greys)
+      mapcontours = kwargs.pop('mapcontours',np.arange(-20,20,2))
+      rescontours = kwargs.pop('rescontours',np.arange(-5,5))
 
       datasets = list(np.array([data]).flatten())
 
@@ -94,7 +97,31 @@ def plot_images(data,chains,xmax=30.,highresbox=[-3.,3.,-3.,3.],emitres=None,fie
                   scaleamp=scaleamp[i],shiftphase=shiftphase[i])
 
             if modelcal[i]: interpdata,_ = model_cal(dset,interpdata)
+            
+            # Image the data
+            imdata = uvimageslow(dset,imsize,pixsize,taper)
+            # Image the model
+            immodel = uvimageslow(interpdata,imsize,pixsize,taper)
+            # And the residuals
+            imdiff = imdata - immodel
+            
+            # Plot everything up
+            ext = [-imsize*pixsize/2.,imsize*pixsize/2.,imsize*pixsize/2.,-imsize*pixsize/2.]
+            s = (sigma_clip(imsize,sig=3.)).std() # Map noise, roughly.
+            axarr[i,0].imshow(imdata,interpolation='nearest',extent=ext,cmap=cmap)
+            axarr[i,0].contour(imdata,extent=ext,colors='k',origin='image',levels=s*mapcontours)
+            axarr[i,0].set_xlim(limits[0],limits[1]); axarr[i,0].set_ylim(limits[2],limits[3])
+            axarr[i,1].imshow(immodel,interpolation='nearest',extent=ext,cmap=cmap,\
+                  vmin=imdata.min(),imdata.max())
+            axarr[i,1].contour(immodel,extent=ext,colors='k',origin='image',levels=s*mapcontours)
+            axarr[i,1].set_xlim(limits[0],limits[1]); axarr[i,1].set_ylim(limits[2],limits[3])
+            axarr[i,2].imshow(imdiff,interpolation='nearest',extent=ext,cmap=cmap,\
+                  vmin=imdata.min(),imdata.max())
+            axarr[i,2].contour(imdiff,extent=ext,colors='k',origin='image',levels=s*rescontours)
+            axarr[i,2].set_xlim(limits[0],limits[1]); axarr[i,2].set_ylim(limits[2],limits[3])
+            axarr[i,3].imshow(immap,interpolation='nearest',extent=ext,cmap=cmap)
+            axarr[i,3].set_xlim(limits[0],limits[1]); axarr[i,3].set_ylim(limits[2],limits[3])
       
 
-      
+      return f,axarr
       
