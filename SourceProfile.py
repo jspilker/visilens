@@ -35,7 +35,7 @@ def SourceProfile(xsource,ysource,Source,Lens):
       """
 
       # First case: a circular Gaussian source.
-      if isinstance(Source,GaussSource):
+      if Source.__class__.__name__=='GaussSource':
             sigma = Source.width['value']
             amp   = Source.flux['value']/(2.*np.pi*sigma**2.)
             xs = Source.xoff['value'] + Lens.x['value']
@@ -43,7 +43,7 @@ def SourceProfile(xsource,ysource,Source,Lens):
             
             return amp * np.exp(-0.5 * (np.sqrt((xsource-xs)**2.+(ysource-ys)**2.)/sigma)**2.)
 
-      elif isinstance(Source,SersicSource):
+      elif Source.__class__.__name__=='SersicSource':
             xs = Source.xoff['value'] + Lens.x['value']
             ys = Source.yoff['value'] + Lens.y['value']
             PA, ar = Source.PA['value']*deg2rad, Source.axisratio['value']
