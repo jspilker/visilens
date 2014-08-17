@@ -35,7 +35,7 @@ def model_cal(realdata,modeldata,dPhi_dphi=None,FdPC=None):
 
       # If we don't have the pre-calculated arrays, do so now. It's expensive
       # to do these matrix inversions at every MCMC step.
-      if np.any((FdPC is None),(dPhi_dphi is None)):
+      if np.any((FdPC is None, dPhi_dphi is None)):
             uniqant = np.unique(np.asarray([realdata.ant1,realdata.ant2]).flatten())
             dPhi_dphi = np.zeros((uniqant.size-1,realdata.u.size))
             for j in range(1,uniqant.size):
