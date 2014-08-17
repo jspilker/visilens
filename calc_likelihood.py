@@ -309,7 +309,7 @@ def create_modelimage(lens,source,shear,xmap,ymap,xemit,yemit,indices,
             Dds= cosmo.angular_diameter_distance_z1z2(lens.z,source[0].z).value
 
       # Do the raytracing for this set of lens & shear params
-      if isinstance(lens,SIELens): xsrc,ysrc = RayTraceSIE(xemit,yemit,lens,Dd,Ds,Dds,shear)
+      if lens.__class__.__name__=='SIELens': xsrc,ysrc = RayTraceSIE(xemit,yemit,lens,Dd,Ds,Dds,shear)
 
       if sourcedatamap is not None: # ... then particular source(s) are specified for this map
             for jsrc in sourcedatamap[i]:
@@ -365,7 +365,8 @@ def fft_interpolate(visdata,immap,xmap,ymap,ug=None,scaleamp=1.,shiftphase=[0.,0
       splinei = RectBivariateSpline(ug,ug,imfft.imag,kx=1,ky=1)
       interpr = spliner.ev(visdata.v,visdata.u)
       interpi = splinei.ev(visdata.v,visdata.u)
-      interpdata = Visdata(visdata.u,visdata.v,interpr,interpi,np.zeros(visdata.u.size))
+      interpdata = Visdata(visdata.u,visdata.v,interpr,interpi,visdata.sigma,\
+            visdata.ant1,visdata.ant2,visdata.PBfwhm,'interpolated_data')
 
       # Apply scaling, phase shifts; wrap phases to +/- pi.
       interpdata.amp *= scaleamp
