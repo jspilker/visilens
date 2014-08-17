@@ -7,9 +7,11 @@ from GenerateLensingGrid import GenerateLensingGrid
 from LensModelMCMC import LensModelMCMC
 from ImageModelMCMC import ImageModelMCMC
 from uvimage import uvimageslow
+from plot_images import plot_images
 from triangleplot import TrianglePlot_MCMC
 from calc_likelihood import *
 from modelcal import model_cal
 __all__ = ['Visdata','Model_objs','utils',
       'RayTracePixels','SourceProfile',
-      'GenerateLensingGrid','uvimage','triangleplot']
+      'GenerateLensingGrid','uvimage','triangleplot',
+      'plot_images']
