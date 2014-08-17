@@ -194,6 +194,7 @@ def LensModelMCMC(data,lens,source,shear=None,
       blobs = lenssampler.blobs
       mus = np.asarray([[a[0] for a in l] for l in blobs]).flatten(order='F')
       bad = np.asarray([np.isnan(m) for m in mus],dtype=bool).flatten()
+      mus = np.asarray(mus.flatten(),dtype=float)
       colnames.append('mu')
 
 
@@ -224,18 +225,18 @@ def LensModelMCMC(data,lens,source,shear=None,
       mcmcresult['chains'] = np.core.records.fromarrays(np.c_[lenssampler.flatchain[~bad],mus[~bad]].T,names=colnames)
       mcmcresult['lnlike'] = lenssampler.flatlnprobability
 
+      
       # If we did any modelcal stuff, keep the antenna phase offsets here
       if any(modelcal): 
             mcmcresult['modelcal'] = [True if j else False for j in modelcal]
             dp = np.squeeze(np.asarray([[a[1] for a in l if ~np.isnan(a[0])] for l in blobs]))
             a = [x for l in dp for x in l] # Have to dick around with this if we had any nan's
-            dphases = np.squeeze(np.reshape(dp,(nwalkers*nstep-bad.sum(),len(data),-1),order='F'))
+            dphases = np.squeeze(np.reshape(a,(nwalkers*nstep-bad.sum(),len(data),-1),order='F'))
             if len(data) > 1: 
                   for i in range(len(data)):
                         if modelcal[i]: mcmcresult['calphases_dset'+str(i)] = np.vstack(dphases[:,i])
             else: 
                   if any(modelcal): mcmcresult['calphases_dset0'] = dphases
-      
 
       return mcmcresult,lenssampler.flatchain,lenssampler.blobs,colnames
 
