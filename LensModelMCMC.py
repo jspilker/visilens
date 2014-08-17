@@ -1,6 +1,7 @@
 import numpy as np
 import scipy.sparse
 import scipy.sparse.linalg
+import os
 import emcee
 from Model_objs import *
 from GenerateLensingGrid import GenerateLensingGrid
@@ -204,7 +205,9 @@ def LensModelMCMC(data,lens,source,shear=None,
 
       try: # keep track of git revision, for reproducibility's sake
             import subprocess
-            mcmcresult['githash'] = subprocess.check_output('git rev-parse HEAD',shell=True).rstrip()
+            gitd = os.path.dirname(__file__)
+            mcmcresult['githash'] = subprocess.check_output('git --git-dir={0:s} --work-tree={1:s} '\
+                  'rev-parse HEAD'.format(gitd+'/.git',gitd),shell=True).rstrip()
       except:
             mcmcresult['githash'] = 'No repo found'
 
