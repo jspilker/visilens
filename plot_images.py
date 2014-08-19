@@ -141,7 +141,10 @@ def plot_images(data,mcmcresult,returnimages=False,
             axarr[i,2].contour(imdiff,extent=ext,colors='k',origin='image',levels=s*rescontours)
             axarr[i,2].set_xlim(limits[0],limits[1]); axarr[i,2].set_ylim(limits[2],limits[3])
             axarr[i,3].imshow(immap,interpolation='nearest',extent=ext,cmap=cmap)
-            axarr[i,3].set_xlim(limits[0]/3.,limits[1]/3.); axarr[i,3].set_ylim(limits[2]/3.,limits[3]/3.)
+            # Give a zoomed-in view in the last panel
+            xm,dx = np.mean((limits[0],limits[1])),(limits[1]-limits[0])/4.
+            ym,dy = np.mean((limits[2],limits[3])),(limits[3]-limits[2])/4.
+            axarr[i,3].set_xlim(xm-dx,xm+dx); axarr[i,3].set_ylim(ym-dy,ym+dy)
       
 
       if returnimages: return f,axarr,images
