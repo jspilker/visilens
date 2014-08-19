@@ -9,7 +9,7 @@ from calc_likelihood import create_modelimage,fft_interpolate
 from modelcal import model_cal
 from GenerateLensingGrid import GenerateLensingGrid
 
-def plot_images(data,mcmcresult,
+def plot_images(data,mcmcresult,returnimages=False,
                   imsize=512,pixsize=0.2,taper=0.,**kwargs):
       """
       Create a four-panel figure from data and chains,
@@ -22,9 +22,21 @@ def plot_images(data,mcmcresult,
       chains:
             A result from running LensModelMCMC.
 
+      returnimages: bool, optional
+            If True, will also return a list of numpy arrays
+            containing the imaged data, interpolated model, and full-res model.
+            Default is False.
+
       Returns:
+      If returnimages is False:
       f, axarr:
             A matplotlib figure and array of Axes objects.
+
+      If returnimages is True:
+      f,axarr,imagelist:
+            Same as above; imagelist is a list of length (# of datasets),
+            containing three arrays each, representing the data,
+            interpolated model, and full-resolution model.
       """
 
       limits = kwargs.pop('limits',
@@ -82,7 +94,9 @@ def plot_images(data,mcmcresult,
       sourcedatamap = mcmcresult['sourcedatamap'] if 'sourcedatamap' in mcmcresult.keys() else None
       modelcal = mcmcresult['modelcal'] if 'modelcal' in mcmcresult.keys() else [False]*len(datasets)
 
-      f,axarr = pl.subplots(len(datasets),4,figsize=(12,3*len(data)))
+      f,axarr = pl.subplots(len(datasets),4,figsize=(12,3*len(datasets)))
+      axarr = np.atleast_2d(axarr)
+      images = [[] for _ in range(len(datasets))] # effing mutable lists.
       
       for i,dset in enumerate(datasets):
             # Get us some coordinates.
@@ -105,11 +119,16 @@ def plot_images(data,mcmcresult,
             immodel = uvimageslow(interpdata,imsize,pixsize,taper)
             # And the residuals
             imdiff = imdata - immodel
+
+            if returnimages: 
+                  images[i].append(imdata); images[i].append(immodel); images[i].append(immap)
             
             # Plot everything up
             ext = [-imsize*pixsize/2.,imsize*pixsize/2.,imsize*pixsize/2.,-imsize*pixsize/2.]
-            #s = (sigma_clip(imdata.flatten(),sig=3.)).std() # Map noise, roughly.
+            #s = (sigma_clip(imdata.flatten(),sig=2.5,iters=None)).std() # Map noise, roughly.
+            #s = 2* ((dset.sigma**-2.).sum())**-0.5 # Map noise, roughly.
             s = imdiff.std() # Map noise, roughly.
+            print s
             axarr[i,0].imshow(imdata,interpolation='nearest',extent=ext,cmap=cmap)
             axarr[i,0].contour(imdata,extent=ext,colors='k',origin='image',levels=s*mapcontours)
             axarr[i,0].set_xlim(limits[0],limits[1]); axarr[i,0].set_ylim(limits[2],limits[3])
@@ -125,5 +144,6 @@ def plot_images(data,mcmcresult,
             axarr[i,3].set_xlim(limits[0]/3.,limits[1]/3.); axarr[i,3].set_ylim(limits[2]/3.,limits[3]/3.)
       
 
-      return f,axarr
+      if returnimages: return f,axarr,images
+      else: return f,axarr
       
