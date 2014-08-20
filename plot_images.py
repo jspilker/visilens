@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.ndimage.measurements import center_of_mass
 from astropy.stats import sigma_clip
 import matplotlib.pyplot as pl
 import matplotlib.cm as cm
@@ -43,7 +44,7 @@ def plot_images(data,mcmcresult,returnimages=False,
             [-imsize*pixsize/2.,+imsize*pixsize/2.,imsize*pixsize/2.,-imsize*pixsize/2.])
       cmap = kwargs.pop('cmap',cm.Greys)
       mapcontours = kwargs.pop('mapcontours',np.delete(np.arange(-21,22,3),7))
-      rescontours = kwargs.pop('rescontours',np.delete(np.arange(-5,5),5))
+      rescontours = kwargs.pop('rescontours',np.array([-6,-5,-4,-3,-2,2,3,4,5,6]))
 
       datasets = list(np.array([data]).flatten())
 
@@ -121,7 +122,7 @@ def plot_images(data,mcmcresult,returnimages=False,
             imdiff = imdata - immodel
 
             if returnimages: 
-                  images[i].append(imdata); images[i].append(immodel); images[i].append(immap)
+                  images[i].append(imdata); images[i].append(immodel)#; images[i].append(immap)
             
             # Plot everything up
             ext = [-imsize*pixsize/2.,imsize*pixsize/2.,imsize*pixsize/2.,-imsize*pixsize/2.]
@@ -140,11 +141,39 @@ def plot_images(data,mcmcresult,returnimages=False,
                   vmin=imdata.min(),vmax=imdata.max())
             axarr[i,2].contour(imdiff,extent=ext,colors='k',origin='image',levels=s*rescontours)
             axarr[i,2].set_xlim(limits[0],limits[1]); axarr[i,2].set_ylim(limits[2],limits[3])
-            axarr[i,3].imshow(immap,interpolation='nearest',extent=ext,cmap=cmap)
+            if np.log10(s) < -6.: sig,unit = 1e9*s,'nJy'
+            elif np.log10(s) < -3.: sig,unit = 1e6*s,'$\mu$Jy'
+            elif np.log10(s) < 0.: sig,unit = 1e3*s,'mJy'
+            else: sig,unit = s,'Jy'
+            axarr[i,2].text(0.1,0.1,"1$\sigma$ = {0:.0f}{1:s}".format(sig,unit),
+                  transform=axarr[i,2].transAxes,bbox=dict(fc='w'))
+            #axarr[i,3].imshow(immap,interpolation='nearest',\
+            #      extent=[xmap.min(),xmap.max(),xmap.max(),xmap.min()],cmap=cmap)
+
             # Give a zoomed-in view in the last panel
-            xm,dx = np.mean((limits[0],limits[1])),(limits[1]-limits[0])/4.
-            ym,dy = np.mean((limits[2],limits[3])),(limits[3]-limits[2])/4.
-            axarr[i,3].set_xlim(xm-dx,xm+dx); axarr[i,3].set_ylim(ym-dy,ym+dy)
+            # Create model image at higher res
+            imemit,_ = create_modelimage(lens,source,shear,xemit,yemit,xemit,yemit,\
+                  [0,xemit.shape[0],0,xemit.shape[1]],sourcedatamap)
+
+            images[i].append(imemit)
+
+            axarr[i,3].imshow(imemit,interpolation='nearest',\
+                  extent=[xemit.min(),xemit.max(),yemit.max(),yemit.min()],cmap=cmap)
+            
+            xcen = center_of_mass(imemit)[1]*(xemit[0,1]-xemit[0,0]) + xemit.min()
+            ycen = center_of_mass(imemit)[0]*(xemit[0,1]-xemit[0,0]) + yemit.min()
+            dx = 0.6*(xemit.max()-xemit.min())
+            dy = 0.6*(yemit.max()-yemit.min())
+            axarr[i,3].set_xlim(xcen-dx,xcen+dx); axarr[i,3].set_ylim(ycen+dy,ycen-dy)
+            
+            #axarr[i,3].set_xlim(xemit.min(),xemit.max())
+            #axarr[i,3].set_ylim(yemit.max(),yemit.min()+1.)
+            # Label some axes and such
+            axarr[i,0].set_title(dset.filename+'\nDirty Image')
+            axarr[i,1].set_title('Model Dirty Image')
+            axarr[i,2].set_title('Residuals')
+            axarr[i,3].set_title('High-res Model')
+            
       
 
       if returnimages: return f,axarr,images
