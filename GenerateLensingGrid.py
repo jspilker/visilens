@@ -84,20 +84,20 @@ def GenerateLensingGrid(data=None,xmax=None,emissionbox=[-5,5,-5,5],fieldres=Non
       indices = np.round(np.interp(np.asarray(emissionbox),fieldcoords,np.arange(Nfield)))
 
       # Calculate the grid coordinates for the high-res lensing grid; the grids should meet at indices
-      Nemx = 1 + np.abs(indices[1]-indices[0])*np.ceil((fieldcoords[1]-fieldcoords[0])/(emitres*rad2arcsec))
-      Nemy = 1 + np.abs(indices[3]-indices[2])*np.ceil((fieldcoords[1]-fieldcoords[0])/(emitres*rad2arcsec))
-      xemcoords = np.linspace(fieldcoords[indices[0]],fieldcoords[indices[1]],Nemx)
-      yemcoords = np.linspace(fieldcoords[indices[2]],fieldcoords[indices[3]],Nemy)
-      xmapemission,ymapemission = np.meshgrid(xemcoords,yemcoords)
-
-      # Below verbatim reproduces yashar's grid
-      #Nemx = 1 + np.abs(indices[1]-indices[0])*np.ceil((fieldcoords[1]-fieldcoords[0])/(2*emitres*rad2arcsec))
-      #Nemy = 1 + np.abs(indices[3]-indices[2])*np.ceil((fieldcoords[1]-fieldcoords[0])/(2*emitres*rad2arcsec))
+      #Nemx = 1 + np.abs(indices[1]-indices[0])*np.ceil((fieldcoords[1]-fieldcoords[0])/(emitres*rad2arcsec))
+      #Nemy = 1 + np.abs(indices[3]-indices[2])*np.ceil((fieldcoords[1]-fieldcoords[0])/(emitres*rad2arcsec))
       #xemcoords = np.linspace(fieldcoords[indices[0]],fieldcoords[indices[1]],Nemx)
       #yemcoords = np.linspace(fieldcoords[indices[2]],fieldcoords[indices[3]],Nemy)
       #xmapemission,ymapemission = np.meshgrid(xemcoords,yemcoords)
-      #xmapemission -= (xmapemission[0,1]-xmapemission[0,0])
-      #ymapemission -= abs((ymapemission[1,0]-ymapemission[0,0]))
+
+      # Below verbatim reproduces yashar's grid
+      Nemx = 1 + np.abs(indices[1]-indices[0])*np.ceil((fieldcoords[1]-fieldcoords[0])/(2*emitres*rad2arcsec))
+      Nemy = 1 + np.abs(indices[3]-indices[2])*np.ceil((fieldcoords[1]-fieldcoords[0])/(2*emitres*rad2arcsec))
+      xemcoords = np.linspace(fieldcoords[indices[0]],fieldcoords[indices[1]],Nemx)
+      yemcoords = np.linspace(fieldcoords[indices[2]],fieldcoords[indices[3]],Nemy)
+      xmapemission,ymapemission = np.meshgrid(xemcoords,yemcoords)
+      xmapemission -= (xmapemission[0,1]-xmapemission[0,0])
+      ymapemission -= abs((ymapemission[1,0]-ymapemission[0,0]))
       #xmapemission -= 4.65484e-5 # i have no idea where this miniscule offset comes from
       #ymapemission -= 4.65484e-5
 
