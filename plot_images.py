@@ -145,7 +145,7 @@ def plot_images(data,mcmcresult,returnimages=False,
             elif np.log10(s) < -3.: sig,unit = 1e6*s,'$\mu$Jy'
             elif np.log10(s) < 0.: sig,unit = 1e3*s,'mJy'
             else: sig,unit = s,'Jy'
-            axarr[i,2].text(0.1,0.1,"1$\sigma$ = {0:.0f}{1:s}".format(sig,unit),
+            axarr[i,2].text(0.1,0.1,"1$\sigma$ = {0:.1f}{1:s}".format(sig,unit),
                   transform=axarr[i,2].transAxes,bbox=dict(fc='w'))
             #axarr[i,3].imshow(immap,interpolation='nearest',\
             #      extent=[xmap.min(),xmap.max(),xmap.max(),xmap.min()],cmap=cmap)
