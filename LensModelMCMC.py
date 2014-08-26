@@ -13,9 +13,9 @@ cosmo = ac.get_current()
 arcsec2rad = np.pi/180/3600
 
 def LensModelMCMC(data,lens,source,shear=None,
-                  xmax=30.,highresbox=[-3.,3.,-3.,3.],emitres=None,fieldres=None,
+                  xmax=30.,highresbox=[-3.,3.,3.,-3.],emitres=None,fieldres=None,
                   sourcedatamap=None, scaleamp=False, shiftphase=False,
-                  modelcal=True,nwalkers=1e3,nburn=1e3,nstep=1e3,nthreads=1):
+                  modelcal=True,nwalkers=1e3,nburn=1e3,nstep=1e3,nthreads=1,mpirun=False):
       """
       Wrapper function which basically takes what the user wants and turns it into the
       format needed for the acutal MCMC lens modeling.
@@ -31,6 +31,12 @@ def LensModelMCMC(data,lens,source,shear=None,
             one source to be fit, should be a list of multiple sources.
       shear:
             An ExternalShear object, or None (default) if no external shear desired
+      xmax:
+            (Half-)Grid size, in arcseconds; the grid will span +/-xmax in x&y
+      highresbox:
+            The region to model at higher resolution (to account for high-magnification
+            and differential lensing effects). Note the sign convention is:
+            +x = West, +y = South, so highresbox[2] will be > highresbox[3]
       sourcedatamap:
             A list of length the number of datasets which tells which source(s)
             are to be fit to which dataset(s). Eg, if two sources are to be fit
@@ -39,16 +45,13 @@ def LensModelMCMC(data,lens,source,shear=None,
             first two sources should both be fit to the first two datasets, while the
             second two should be fit to the third dataset. If None, will assume
             all sources should be fit to all datasets.
-      scaledata:
+      scaleamp:
             A list of length the number of datasets which tells whether a flux
             rescaling is allowed and which dataset the scaling should be relative to.
-            Negative numbers indicate that the flux should be treated as accurate;
-            positive (or 0) tells which dataset to allow a rescaling to. Eg, if we
-            fit to two ALMA configurations, we can let the second float relative to
-            the first with [-1,0]. If we have two ALMA datasets and an ATCA, can
-            use [-1,0,-1]. Any relative rescaling is restricted to +/- a factor
-            of 4, ie, 25-400%, which should be way more than any relative calibration
-            errors unless you've done something wrong.
+            False indicates no scaling should be done, while True indicates that
+            amplitude scaling should be allowed.
+      shiftphase:
+            Similar to scaleamp above, but allowing for positional/astrometric offsets.
       modelcal:
             Whether or not to perform the pseudo-selfcal procedure of H+13
       nwalkers:
@@ -60,6 +63,10 @@ def LensModelMCMC(data,lens,source,shear=None,
             Number of actual steps to take in the mcmc chains after the burn-in
       nthreads:
             Number of threads (read: cores) to use during the fitting, default 1.
+      mpirun:
+            Whether to parallelize using MPI instead of multiprocessing. If True,
+            nthreads has no effect, and your script should be run with, eg,
+            mpirun -np 16 python lensmodel.py.
 
       Returns:
       mcmcresult:
@@ -76,6 +83,15 @@ def LensModelMCMC(data,lens,source,shear=None,
             Basically all the keys to the mcmcresult dict; eventually won't need
             to return this once mcmcresult is packaged up nicely.
       """
+
+      if mpirun:
+            nthreads = 1
+            from emcee.utils import MPIPool
+            pool = MPIPool()
+            if not pool.is_master():
+            pool.wait()
+            sys.exit
+      else: pool = None
 
       # Making these lists just makes later stuff easier since we now know the dtype
       source = list(np.array([source]).flatten()) # Ensure source(s) are a list
@@ -176,7 +192,7 @@ def LensModelMCMC(data,lens,source,shear=None,
             args = [data,lens,source,shear,Dd,Ds,Dds,ug,
                     xmap,ymap,xemit,yemit,indices,
                     sourcedatamap,scaleamp,shiftphase,modelcal],
-            threads=nthreads)
+            threads=nthreads,pool=pool)
 
       #return initials,lenssampler
       
@@ -188,6 +204,7 @@ def LensModelMCMC(data,lens,source,shear=None,
       # Run actual chains
       print "Done. Running chains... "
       lenssampler.run_mcmc(pos,nstep,rstate0=rstate)
+      if mpirun: pool.close()
       print "Mean acceptance fraction: ",np.mean(lenssampler.acceptance_fraction)
 
       # Package up the magnifications and modelcal phases; disregards nan points (where
