@@ -25,8 +25,8 @@ allpars = np.c_[xL,yL,ML,eL,PAL,xS,yS,FS,RS]
 #allpars[:,4] = 180.-allpars[:,4]
 
 # a pseudo-burnin
-#lnlike = lnlike[5000:]
-#allpars = allpars[5000:,:]
+lnlike = lnlike[5000:]
+allpars = allpars[5000:,:]
 
 chaindict = {}
 cols = ['xL','yL','ML','eL','PAL','xoffS0','yoffS0','fluxS0','widthS0']
