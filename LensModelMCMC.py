@@ -89,8 +89,8 @@ def LensModelMCMC(data,lens,source,shear=None,
             from emcee.utils import MPIPool
             pool = MPIPool()
             if not pool.is_master():
-            pool.wait()
-            sys.exit
+            	pool.wait()
+            	sys.exit(0)
       else: pool = None
 
       # Making these lists just makes later stuff easier since we now know the dtype
