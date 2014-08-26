@@ -164,18 +164,18 @@ class ExternalShear:
       def __init__(self,shear,shearangle):
             # Do some input handling.
             if not isinstance(shear,dict):
-                  shear = {'value':shear,'fixed':True,'prior':[0.,1.]}
+                  shear = {'value':shear,'fixed':False,'prior':[0.,1.]}
             if not isinstance(shearangle,dict):
-                  shearangle = {'value':shearangle,'fixed':True,'prior':[0.,180.]}
+                  shearangle = {'value':shearangle,'fixed':False,'prior':[0.,180.]}
 
             if not all(['value' in d for d in [shear,shearangle]]): 
                   raise KeyError("All parameter dicts must contain the key 'value'.")
 
-            if not 'fixed' in shear: shear['fixed'] = True
-            if not 'fixed' in shearangle: shearangle['fixed'] = True
+            if not 'fixed' in shear: shear['fixed'] = False
+            if not 'fixed' in shearangle: shearangle['fixed'] = False
 
             if not 'prior' in shear: shear['prior'] = [0.,1.]
-            if not 'prior' in shearangle: shearangle['prior'] = [0.,360.]
+            if not 'prior' in shearangle: shearangle['prior'] = [0.,180.]
 
             self.shear = shear
             self.shearangle = shearangle
