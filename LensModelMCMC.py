@@ -2,6 +2,7 @@ import numpy as np
 import scipy.sparse
 import scipy.sparse.linalg
 import os
+import sys
 import emcee
 from Model_objs import *
 from GenerateLensingGrid import GenerateLensingGrid
@@ -107,7 +108,7 @@ def LensModelMCMC(data,lens,source,shear=None,
       # assembling the user-provided info into a form it likes
       ndim, p0, colnames = 0, [], []
       # Lens first
-      if isinstance(lens,SIELens):
+      if lens.__class__.__name__=='SIELens':
             for key in ['x','y','M','e','PA']:
                   if not vars(lens)[key]['fixed']:
                         ndim += 1
@@ -115,13 +116,13 @@ def LensModelMCMC(data,lens,source,shear=None,
                         colnames.append(key+'L')
       # Then source(s)
       for i,src in enumerate(source):
-            if isinstance(src,GaussSource):
+            if src.__class__.__name__=='GaussSource':
                   for key in ['xoff','yoff','flux','width']:
                         if not vars(src)[key]['fixed']:
                               ndim += 1
                               p0.append(vars(src)[key]['value'])
                               colnames.append(key+'S'+str(i))
-            elif isinstance(src,SersicSource):
+            elif src.__class__.__name__=='SersicSource':
                   for key in ['xoff','yoff','flux','alpha','index','axisratio','PA']:
                         if not vars(src)[key]['fixed']:
                               ndim += 1
@@ -215,25 +216,29 @@ def LensModelMCMC(data,lens,source,shear=None,
       mus = np.asarray(mus.flatten(),dtype=float)
       colnames.append('mu')
 
-
+      
       # Assemble the output. Want to return something that contains both the MCMC chains
       # themselves, but also metadata about the run.
       mcmcresult = {}
 
-      try: # keep track of git revision, for reproducibility's sake
+      # keep track of git revision, for reproducibility's sake
+      # if run under mpi, this will spew some scaremongering warning text,
+      # but it's fine. use --mca mpi_warn_on_fork 0 in the mpirun statement to disable
+      try: 
             import subprocess
             gitd = os.path.dirname(__file__)
             mcmcresult['githash'] = subprocess.check_output('git --git-dir={0:s} --work-tree={1:s} '\
                   'rev-parse HEAD'.format(gitd+'/.git',gitd),shell=True).rstrip()
       except:
             mcmcresult['githash'] = 'No repo found'
-
+      
+      
       mcmcresult['datasets'] = [dset.filename for dset in data] # Data files used
 
       mcmcresult['lens_p0'] = lens      # Initial params for lens,src(s),shear; also tells if fixed, priors, etc.
       mcmcresult['source_p0'] = source
       if shear: mcmcresult['shear_p0'] = shear
-
+      
       if sourcedatamap: mcmcresult['sourcedatamap'] = sourcedatamap
       mcmcresult['xmax'] = xmax
       mcmcresult['highresbox'] = highresbox
@@ -244,7 +249,7 @@ def LensModelMCMC(data,lens,source,shear=None,
 
       #mcmcresult['chains'] = np.core.records.fromarrays(np.c_[lenssampler.flatchain[~bad],mus[~bad]].T,names=colnames)
       mcmcresult['lnlike'] = lenssampler.flatlnprobability
-
+      
       
       # If we did any modelcal stuff, keep the antenna phase offsets here
       if any(modelcal): 
@@ -257,6 +262,6 @@ def LensModelMCMC(data,lens,source,shear=None,
                         if modelcal[i]: mcmcresult['calphases_dset'+str(i)] = np.vstack(dphases[:,i])
             else: 
                   if any(modelcal): mcmcresult['calphases_dset0'] = dphases
-
+      
       return mcmcresult,lenssampler.flatchain,lenssampler.blobs,colnames
 
