@@ -49,40 +49,40 @@ def calc_vis_lnlike(p,data,lens,source,shear,
       lnL:
             The log-likelihood of the model given the data.
       """
-
+      
       # First we'll take care of the priors implemented on the parameters.
       # If we pass them all, `pass_priors' returns updated versions of all the objects
       # Otherwise, we got False, and unpacking all those values raises a TypeError.
       x = pass_priors(p,lens,source,shear,scaleamp,shiftphase)
       try: thislens,thissource,thisshear,thisascale,thispshift = x
       except TypeError: return -np.inf,[np.nan]
-
+      
       # Ok, if we've made it this far we can do the actual likelihood calculation
       # Loop through all the datasets, fitting the requested sources to each. We'll also calculate
       # magnifications for each source, defined as the sum of the output flux / input flux
       # Thus, the returned magnification will be an array of length (# of sources)
       lnL,dphases = 0., [[]]*len(data)
       for i,dset in enumerate(data):
-
+      
             # Make a model of this field.
             immap,mags = create_modelimage(thislens,thissource,thisshear,\
                   xmap,ymap,xemit,yemit,indices,Dd,Ds,Dds,sourcedatamap)
-
+            
             # ... and interpolate/sample it at our uv coordinates
             interpdata = fft_interpolate(dset,immap,xmap,ymap,ug,thisascale[i],thispshift[i])            
-
+            
             # If desired, do model-cal on this dataset
             if modelcal[i]:
                   modeldata,dphase = model_cal(dset,interpdata,modelcal[i][0],modelcal[i][1])
                   dphases[i] = dphase
                   lnL -= (((modeldata.real - interpdata.real)**2. + (modeldata.imag - interpdata.imag)**2.)/modeldata.sigma**2.).sum()
-
+                  
             # Calculate the contribution to chi2 from this dataset
             else: lnL -= (((dset.real - interpdata.real)**2. + (dset.imag - interpdata.imag)**2.)/dset.sigma**2.).sum()
 
       # Last-ditch attempt to keep from hanging
       if np.isnan(lnL): lnL = -np.inf
-
+      
       return lnL,[mags,dphases]
 
 
@@ -230,7 +230,7 @@ def pass_priors(p,lens,source,shear,scaleamp,shiftphase):
       thispshift = copy.deepcopy(shiftphase)
             
       ip = 0 # current index in p
-      if isinstance(lens,SIELens):
+      if lens.__class__.__name__=='SIELens':
             for key in ['x','y','M','e','PA']:
                   if not vars(lens)[key]['fixed']:
                         # A uniform prior
@@ -239,13 +239,13 @@ def pass_priors(p,lens,source,shear,scaleamp,shiftphase):
                         ip += 1
       # now do the source(s)
       for i,src in enumerate(source): # Source is a list of source objects
-            if isinstance(src,GaussSource):
+            if src.__class__.__name__=='GaussSource':
                   for key in ['xoff','yoff','flux','width']:
                         if not vars(src)[key]['fixed']:
                               if p[ip] < vars(src)[key]['prior'][0] or p[ip] > vars(src)[key]['prior'][1]: return False
                               thissource[i].__dict__[key]['value'] = p[ip]
                               ip += 1
-            elif isinstance(src,SersicSource):
+            elif src.__class__.__name__=='SersicSource':
                   for key in ['xoff','yoff','flux','alpha','index','axisratio','PA']:
                         if not vars(src)[key]['fixed']:
                               if p[ip] < vars(src)[key]['prior'][0] or p[ip] > vars(src)[key]['prior'][1]: return False
