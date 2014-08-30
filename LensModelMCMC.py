@@ -242,7 +242,7 @@ def LensModelMCMC(data,lens,source,shear=None,
       if any(scaleamp): mcmcresult['scaleamp'] = scaleamp
       if any(shiftphase): mcmcresult['shiftphase'] = shiftphase
 
-      mcmcresult['chains'] = np.core.records.fromarrays(np.c_[lenssampler.flatchain[~bad],mus[~bad]].T,names=colnames)
+      #mcmcresult['chains'] = np.core.records.fromarrays(np.c_[lenssampler.flatchain[~bad],mus[~bad]].T,names=colnames)
       mcmcresult['lnlike'] = lenssampler.flatlnprobability
 
       
