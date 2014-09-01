@@ -199,7 +199,12 @@ def LensModelMCMC(data,lens,source,shear=None,
       
       # Run burn-in phase
       print "Running burn-in... "
-      pos,prob,rstate,mus = lenssampler.run_mcmc(initials,nburn,storechain=False)
+      #pos,prob,rstate,mus = lenssampler.run_mcmc(initials,nburn,storechain=False)
+      for i,result in enumerate(lenssampler.sample(initials,iterations=nburn,storechain=False)):
+            print i,'/',nburn
+            pos,prob,rstate,blob = result
+      
+      
       lenssampler.reset()
       
       # Run actual chains
