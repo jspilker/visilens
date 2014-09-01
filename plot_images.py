@@ -127,8 +127,8 @@ def plot_images(data,mcmcresult,returnimages=False,
             # Plot everything up
             ext = [-imsize*pixsize/2.,imsize*pixsize/2.,imsize*pixsize/2.,-imsize*pixsize/2.]
             #s = (sigma_clip(imdata.flatten(),sig=2.5,iters=None)).std() # Map noise, roughly.
-            #s = 2* ((dset.sigma**-2.).sum())**-0.5 # Map noise, roughly.
-            s = imdiff.std() # Map noise, roughly.
+            s = ((dset.sigma**-2.).sum())**-0.5 # Map noise, roughly.
+            #s = imdiff.std() # Map noise, roughly.
             print s
             axarr[i,0].imshow(imdata,interpolation='nearest',extent=ext,cmap=cmap)
             axarr[i,0].contour(imdata,extent=ext,colors='k',origin='image',levels=s*mapcontours)
@@ -153,7 +153,7 @@ def plot_images(data,mcmcresult,returnimages=False,
             # Give a zoomed-in view in the last panel
             # Create model image at higher res
             imemit,_ = create_modelimage(lens,source,shear,xemit,yemit,xemit,yemit,\
-                  [0,xemit.shape[0],0,xemit.shape[1]],sourcedatamap)
+                  [0,xemit.shape[1],0,xemit.shape[0]],sourcedatamap)
 
             images[i].append(imemit)
 
