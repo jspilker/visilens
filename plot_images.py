@@ -9,6 +9,7 @@ from uvimage import uvimageslow
 from calc_likelihood import create_modelimage,fft_interpolate
 from modelcal import model_cal
 from GenerateLensingGrid import GenerateLensingGrid
+import copy
 
 def plot_images(data,mcmcresult,returnimages=False,
                   imsize=512,pixsize=0.2,taper=0.,**kwargs):
@@ -49,10 +50,10 @@ def plot_images(data,mcmcresult,returnimages=False,
       datasets = list(np.array([data]).flatten())
 
       # shorthand for later
-      c = mcmcresult['chains']
+      c = copy.deepcopy(mcmcresult['chains'])
 
       # Set up to create the model image. We'll assume the best-fit values are all the medians.
-      lens,source = mcmcresult['lens_p0'], mcmcresult['source_p0']
+      lens,source = copy.deepcopy(mcmcresult['lens_p0']), copy.deepcopy(mcmcresult['source_p0'])
       if isinstance(lens,SIELens):
             for key in ['x','y','M','e','PA']:
                   if not vars(lens)[key]['fixed']:
