@@ -88,7 +88,7 @@ def LensModelMCMC(data,lens,source,shear=None,
       if mpirun:
             nthreads = 1
             from emcee.utils import MPIPool
-            pool = MPIPool(debug=True,loadbalance=True)
+            pool = MPIPool(debug=False,loadbalance=True)
             if not pool.is_master():
             	pool.wait()
             	sys.exit(0)
