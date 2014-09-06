@@ -88,7 +88,7 @@ def LensModelMCMC(data,lens,source,shear=None,
       if mpirun:
             nthreads = 1
             from emcee.utils import MPIPool
-            pool = MPIPool()
+            pool = MPIPool(debug=False,loadbalance=True)
             if not pool.is_master():
             	pool.wait()
             	sys.exit(0)
@@ -199,7 +199,13 @@ def LensModelMCMC(data,lens,source,shear=None,
       
       # Run burn-in phase
       print "Running burn-in... "
-      pos,prob,rstate,mus = lenssampler.run_mcmc(initials,nburn,storechain=False)
+      #pos,prob,rstate,mus = lenssampler.run_mcmc(initials,nburn,storechain=False)
+      for i,result in enumerate(lenssampler.sample(initials,iterations=nburn,storechain=False)):
+            # WTF, el gato?
+            if mpirun: print i,'/',nburn
+            pos,prob,rstate,blob = result
+      
+      
       lenssampler.reset()
       
       # Run actual chains

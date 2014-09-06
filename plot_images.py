@@ -9,6 +9,7 @@ from uvimage import uvimageslow
 from calc_likelihood import create_modelimage,fft_interpolate
 from modelcal import model_cal
 from GenerateLensingGrid import GenerateLensingGrid
+import copy
 
 def plot_images(data,mcmcresult,returnimages=False,
                   imsize=512,pixsize=0.2,taper=0.,**kwargs):
@@ -45,14 +46,15 @@ def plot_images(data,mcmcresult,returnimages=False,
       cmap = kwargs.pop('cmap',cm.Greys)
       mapcontours = kwargs.pop('mapcontours',np.delete(np.arange(-21,22,3),7))
       rescontours = kwargs.pop('rescontours',np.array([-6,-5,-4,-3,-2,2,3,4,5,6]))
+      level = kwargs.pop('level',None)
 
       datasets = list(np.array([data]).flatten())
 
       # shorthand for later
-      c = mcmcresult['chains']
+      c = copy.deepcopy(mcmcresult['chains'])
 
       # Set up to create the model image. We'll assume the best-fit values are all the medians.
-      lens,source = mcmcresult['lens_p0'], mcmcresult['source_p0']
+      lens,source = copy.deepcopy(mcmcresult['lens_p0']), copy.deepcopy(mcmcresult['source_p0'])
       if isinstance(lens,SIELens):
             for key in ['x','y','M','e','PA']:
                   if not vars(lens)[key]['fixed']:
@@ -126,9 +128,14 @@ def plot_images(data,mcmcresult,returnimages=False,
             
             # Plot everything up
             ext = [-imsize*pixsize/2.,imsize*pixsize/2.,imsize*pixsize/2.,-imsize*pixsize/2.]
-            #s = (sigma_clip(imdata.flatten(),sig=2.5,iters=None)).std() # Map noise, roughly.
-            #s = 2* ((dset.sigma**-2.).sum())**-0.5 # Map noise, roughly.
-            s = imdiff.std() # Map noise, roughly.
+            # Figure out what to use as the noise level; sum of weights if no user-supplied value
+            if level is None: s = ((dset.sigma**-2.).sum())**-0.5
+            else:
+                  try:
+                        s = [e for e in level][i]
+                  except TypeError:
+                        s = float(level)
+            
             print s
             axarr[i,0].imshow(imdata,interpolation='nearest',extent=ext,cmap=cmap)
             axarr[i,0].contour(imdata,extent=ext,colors='k',origin='image',levels=s*mapcontours)
@@ -153,7 +160,7 @@ def plot_images(data,mcmcresult,returnimages=False,
             # Give a zoomed-in view in the last panel
             # Create model image at higher res
             imemit,_ = create_modelimage(lens,source,shear,xemit,yemit,xemit,yemit,\
-                  [0,xemit.shape[0],0,xemit.shape[1]],sourcedatamap)
+                  [0,xemit.shape[1],0,xemit.shape[0]],sourcedatamap)
 
             images[i].append(imemit)
 
