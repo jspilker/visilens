@@ -10,7 +10,9 @@ set_current('WMAP9')
 cosmo = get_current()
 
 xim = np.arange(-3,3,.015)
-yim = np.arange(-3,3,.015)
+yim = np.arange(3,-3,-.015)
+#xim = np.arange(4.0,8.0,0.015)
+#yim = np.arange(-2.5,-6.5,-0.015)
 
 xim,yim = np.meshgrid(xim,yim)
 
@@ -20,8 +22,12 @@ MLens,eLens,PALens = 2.868e11,0.552,180-92.728
 #xSource,ySource,FSource,sSource = 0.228,0.413,0.023,0.247
 xSource,ySource,FSource,sSource = 0.090,0.141,0.0185,0.111
 
+#zLens,zSource = 0.845,3.7602
+#xLens,yLens = 6.82022661,-4.66449807
+#MLens,eLens,PALens = 4.92552193e11,0.303347103,-8.23321761
+#xSource,ySource,FSource,sSource = -0.318770158,-0.358299219,0.0128027933,0.148289020
 
-"""
+
 zLens,zSource = 0.8, 5.65
 xLens,yLens = 0.,0.
 MLens,eLens,PALens = 3e11,0.25,40
@@ -39,10 +45,10 @@ FSblue,sSblue = 0.273e-3,0.148
 xSred,ySred = 0.051,0.182
 FSred,sSred = 0.176e-3, 0.097
 #xSource,ySource, sSource = xSred,ySred,sSred
-"""
+
 
 Lens = SIELens(zLens,xLens,yLens,MLens,eLens,PALens)
-Source = GaussSource(zSource,xSource,ySource,FSource,sSource)
+Source = GaussSource(zSource,True,xSource,ySource,FSource,sSource)
 Shear = ExternalShear(0.,0.)
 Dd = cosmo.angular_diameter_distance(zLens).value
 Ds = cosmo.angular_diameter_distance(zSource).value
@@ -50,8 +56,8 @@ Dds = cosmo.angular_diameter_distance_z1z2(zLens,zSource).value
 
 xsource,ysource = RayTraceSIE(xim,yim,Lens,Dd,Ds,Dds,ExternalShear=Shear)
 
-imbg = SourceProfile(xim,yim,Source,Lens)
-imlensed = SourceProfile(xsource,ysource,Source,Lens)
+imbg = SourceProfile(xim,yim,Source,Lens)[::-1]
+imlensed = SourceProfile(xsource,ysource,Source,Lens)[::-1]
 caustics = CausticsSIE(Lens,Dd,Ds,Dds,Shear)
 
 f = pl.figure(figsize=(12,6))
@@ -116,10 +122,10 @@ def update(val):
       newDds= cosmo.angular_diameter_distance_z1z2(zL,zS).value
       newLens = SIELens(zLens,xL,yL,10**ML,eL,PAL)
       newShear = ExternalShear(sh,sha)
-      newSource = GaussSource(zS,xs,ys,Fs,ws)
+      newSource = GaussSource(zS,True,xs,ys,Fs,ws)
       xs,ys = RayTraceSIE(xim,yim,newLens,newDd,newDs,newDds,newShear)
-      imbg = SourceProfile(xim,yim,newSource,newLens)
-      imlensed = SourceProfile(xs,ys,newSource,newLens)
+      imbg = SourceProfile(xim,yim,newSource,newLens)[::-1]
+      imlensed = SourceProfile(xs,ys,newSource,newLens)[::-1]
       caustics = CausticsSIE(newLens,Dd,Ds,Dds,newShear)
 
       ax.cla()
