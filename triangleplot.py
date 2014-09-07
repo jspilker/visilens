@@ -42,12 +42,12 @@ def TrianglePlot_MCMC(mcmcresult,plotmag=True,plotnuisance=False):
       if not plotnuisance: allcols = [x for x in allcols if not any([l in x for l in nuisance])]
 
       labelmap = {'xL':'$x_{L}$, arcsec','yL':'$y_{L}$, arcsec','ML':'$M_{L}$, $10^{11} M_\odot$',\
-            'eL':'$e_{L}$','PAL':'$\\theta_{L}$, deg E of N','xoffS0':'$\Delta x_{S}$, arcsec','yoffS0':'$\Delta y_{S}$, arcsec',\
-            'fluxS0':'$F_{S}$, mJy','widthS0':'$\sigma_{S}$, arcsec','alphaS0':'$\\alpha_{S}$, arcsec',\
-            'indexS0':'$n_{S}$','axisratioS0':'$b_{S}/\\alpha_{S}$','PAS0':'$\phi_{S}$, deg E of N',\
+            'eL':'$e_{L}$','PAL':'$\\theta_{L}$, deg E of N','xoffS':'$\Delta x_{S}$, arcsec','yoffS':'$\Delta y_{S}$, arcsec',\
+            'fluxS':'$F_{S}$, mJy','widthS':'$\sigma_{S}$, arcsec','alphaS':'$\\alpha_{S}$, arcsec',\
+            'indexS':'$n_{S}$','axisratioS':'$b_{S}/\\alpha_{S}$','PAS':'$\phi_{S}$, deg E of N',\
             'shear':'$\gamma$','shearangle':'$\\theta_\gamma$',
-            'mu':'$\mu$','ampscale_dset1':'$A_{1-0}$',
-            'astromshift_x_dset1':'$\delta x_{1-0}$, arcsec','astromshift_y_dset1':'$\delta y_{1-0}$, arcsec'}
+            'mu':'$\mu_{}$','ampscale_dset':'$A_{}$',
+            'astromshift_x_dset':'$\delta x_{}$, arcsec','astromshift_y_dset':'$\delta y_{}$, arcsec'}
 
       f,axarr = pl.subplots(len(allcols),len(allcols),figsize=(len(allcols)*3,len(allcols)*3))
       axarr[0,-1].text(-0.8,0.9,'Chain parameters:',fontsize='xx-large',transform=axarr[0,-1].transAxes)
@@ -60,6 +60,14 @@ def TrianglePlot_MCMC(mcmcresult,plotmag=True,plotnuisance=False):
                   if yax=='ML': y /= 1e11
                   if 'fluxS' in xax: x *= 1e3 # to mJy from Jy
                   if 'fluxS' in yax: y *= 1e3 
+                  # Figure out the axis labels...
+                  if xax[-1].isdigit():
+                        xlab = (xax[-1]+'}').join(labelmap[xax[:-1]].split('}'))
+                  else: xlab = labelmap[xax]
+                  if yax[-1].isdigit():
+                        ylab = (yax[-1]+'}').join(labelmap[yax[:-1]].split('}'))
+                  else: ylab = labelmap[yax]
+
                   # To counter outlying walkers stuck in regions of low likelihood, we use percentiles
                   # instead of std().
                   xstd = np.ediff1d(np.percentile(x,[15.87,84.13]))[0]
@@ -71,21 +79,21 @@ def TrianglePlot_MCMC(mcmcresult,plotmag=True,plotnuisance=False):
                         marginalize_2d(x,y,axarr[row,col],\
                               extent=[xmin,xmax,ymin,ymax],bins=max(np.floor(x.size/1000),50))
                         if col > 0: pl.setp(axarr[row,col].get_yticklabels(),visible=False)
-                        else: axarr[row,col].set_ylabel(labelmap[yax],fontsize='x-large')
+                        else: axarr[row,col].set_ylabel(ylab,fontsize='x-large')
                         if row<len(allcols)-1: pl.setp(axarr[row,col].get_xticklabels(),visible=False)
-                        else: axarr[row,col].set_xlabel(labelmap[xax],fontsize='x-large')
+                        else: axarr[row,col].set_xlabel(xlab,fontsize='x-large')
                         axarr[row,col].xaxis.set_major_locator(MaxNLocator(5))
                         axarr[row,col].yaxis.set_major_locator(MaxNLocator(5))
                   elif row == col:
                         marginalize_1d(x,axarr[row,col],extent=[xmin,xmax],\
                               bins=max(np.floor(x.size/1000),50))
-                        if row<len(allcols)-1: axarr[row,col].set_xlabel(labelmap[xax],fontsize='x-large')
+                        if row<len(allcols)-1: axarr[row,col].set_xlabel(xlab,fontsize='x-large')
                         if col<len(allcols)-1: pl.setp(axarr[row,col].get_xticklabels(),visible=False)
                         axarr[row,col].xaxis.set_major_locator(MaxNLocator(5))
                         #axarr[row,col].yaxis.set_major_locator(MaxNLocator(5))
                   else:                   
                         if not (row==0 and col==len(allcols)): axarr[row,col].set_axis_off()
-            axarr[0,-1].text(-0.8,0.7-it,'{0:10s} = {1:.3f} $\pm$ {2:.3f}'.format(labelmap[yax],np.median(y),ystd),\
+            axarr[0,-1].text(-0.8,0.7-it,'{0:10s} = {1:.3f} $\pm$ {2:.3f}'.format(ylab,np.median(y),ystd),\
                   fontsize='xx-large',transform=axarr[0,-1].transAxes)
             it += 0.2
 

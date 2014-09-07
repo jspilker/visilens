@@ -46,6 +46,7 @@ def plot_images(data,mcmcresult,returnimages=False,
       cmap = kwargs.pop('cmap',cm.Greys)
       mapcontours = kwargs.pop('mapcontours',np.delete(np.arange(-21,22,3),7))
       rescontours = kwargs.pop('rescontours',np.array([-6,-5,-4,-3,-2,2,3,4,5,6]))
+      level = kwargs.pop('level',None)
 
       datasets = list(np.array([data]).flatten())
 
@@ -127,9 +128,14 @@ def plot_images(data,mcmcresult,returnimages=False,
             
             # Plot everything up
             ext = [-imsize*pixsize/2.,imsize*pixsize/2.,imsize*pixsize/2.,-imsize*pixsize/2.]
-            #s = (sigma_clip(imdata.flatten(),sig=2.5,iters=None)).std() # Map noise, roughly.
-            s = ((dset.sigma**-2.).sum())**-0.5 # Map noise, roughly.
-            #s = imdiff.std() # Map noise, roughly.
+            # Figure out what to use as the noise level; sum of weights if no user-supplied value
+            if level is None: s = ((dset.sigma**-2.).sum())**-0.5
+            else:
+                  try:
+                        s = [e for e in level][i]
+                  except TypeError:
+                        s = float(level)
+            
             print s
             axarr[i,0].imshow(imdata,interpolation='nearest',extent=ext,cmap=cmap)
             axarr[i,0].contour(imdata,extent=ext,colors='k',origin='image',levels=s*mapcontours)
