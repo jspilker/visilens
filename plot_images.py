@@ -136,7 +136,7 @@ def plot_images(data,mcmcresult,returnimages=False,
                   except TypeError:
                         s = float(level)
             
-            print s
+            print "Data - Model rms: ",imdiff.std()
             axarr[i,0].imshow(imdata,interpolation='nearest',extent=ext,cmap=cmap)
             axarr[i,0].contour(imdata,extent=ext,colors='k',origin='image',levels=s*mapcontours)
             axarr[i,0].set_xlim(limits[0],limits[1]); axarr[i,0].set_ylim(limits[2],limits[3])
