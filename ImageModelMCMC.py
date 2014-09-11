@@ -59,7 +59,7 @@ def ImageModelMCMC(image,psf,sigma,lens,source,shear=None,
       mcmcresult:
             A nested dict containing the chains requested. Will have all the MCMC
             chain results, plus metadata about the run (initial params, data used,
-            etc.). Formatting still a work in progress (esp. for modelcal phases).
+            etc.). Formatting still a work in progress.
       chains:
             The raw chain data, for testing.
       blobs:
