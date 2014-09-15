@@ -114,10 +114,12 @@ def plot_images(data,mcmcresult,returnimages=False,
             interpdata = fft_interpolate(dset,immap,xmap,ymap,ug=None,\
                   scaleamp=scaleamp[i],shiftphase=shiftphase[i])
 
-            if modelcal[i]: interpdata,_ = model_cal(dset,interpdata)
+            if modelcal[i]: 
+                  selfcal,_ = model_cal(dset,interpdata)
+                  imdata = uvimageslow(selfcal,imsize,pixsize,taper)
             
-            # Image the data
-            imdata = uvimageslow(dset,imsize,pixsize,taper)
+            else: imdata = uvimageslow(dset,imsize,pixsize,taper)
+            
             # Image the model
             immodel = uvimageslow(interpdata,imsize,pixsize,taper)
             # And the residuals
