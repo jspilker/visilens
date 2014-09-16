@@ -171,16 +171,20 @@ def plot_images(data,mcmcresult,returnimages=False,
             
             xcen = center_of_mass(imemit)[1]*(xemit[0,1]-xemit[0,0]) + xemit.min()
             ycen = center_of_mass(imemit)[0]*(xemit[0,1]-xemit[0,0]) + yemit.min()
-            dx = 0.6*(xemit.max()-xemit.min())
-            dy = 0.6*(yemit.max()-yemit.min())
+            dx = 0.5*(xemit.max()-xemit.min())
+            dy = 0.5*(yemit.max()-yemit.min())
             axarr[i,3].set_xlim(xcen-dx,xcen+dx); axarr[i,3].set_ylim(ycen+dy,ycen-dy)
             
-            #axarr[i,3].set_xlim(xemit.min(),xemit.max())
-            #axarr[i,3].set_ylim(yemit.max(),yemit.min()+1.)
+            s = imdiff.std()
+            if np.log10(s) < -6.: sig,unit = 1e9*s,'nJy'
+            elif np.log10(s) < -3.: sig,unit = 1e6*s,'$\mu$Jy'
+            elif np.log10(s) < 0.: sig,unit = 1e3*s,'mJy'
+            else: sig,unit = s,'Jy'
+            
             # Label some axes and such
             axarr[i,0].set_title(dset.filename+'\nDirty Image')
             axarr[i,1].set_title('Model Dirty Image')
-            axarr[i,2].set_title('Residuals')
+            axarr[i,2].set_title('Residuals - {0:.1f}{1:s} rms'.format(sig,unit))
             axarr[i,3].set_title('High-res Model')
             
       
