@@ -10,7 +10,17 @@ rad2arcsec =3600.*180./np.pi
 deg2rad = np.pi/180.
 rad2deg = 180./np.pi
 
-__all__ = ['RayTraceSIE','CausticsSIE']
+__all__ = ['LensRayTrace','RayTraceSIE','CausticsSIE']
+
+def LensRayTrace(xim,yim,lens,Dd,Ds,Dds,ExternalShear=None):
+      """
+      Wrapper to pass off lensing calculations to any number of functions
+      defined below.
+      """
+      
+      if lens.__class__.__name__=='SIELens':
+            return RayTraceSIE(xim,yim,lens,Dd,Ds,Dds,ExternalShear)
+      else: raise ValueError("Only SIE Lenses supported for now...")
 
 def RayTraceSIE(xim,yim,SIELens,Dd,Ds,Dds,ExternalShear=None):
       """

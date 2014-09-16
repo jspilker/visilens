@@ -1,6 +1,7 @@
 # Collection of classes for various useful lenses/sources/shear
 import numpy as np
-__all__ = ['SIELens','SersicSource','GaussSource','ExternalShear']
+__all__ = ['SIELens','SersicSource','GaussSource','PointSource',\
+            'ExternalShear']
 
 class SIELens:
       """
@@ -61,8 +62,11 @@ class SersicSource(object):
       If lensed is True, it's assumed this source is in the background, and we
       lens it; otherwise it's assumed to be a foreground/unlensed object.
       
-      Units of parameters are xoff,yoff: arcsec rel to lens; flux: Jy; 
+      Units of parameters are xoff,yoff: arcsec; flux: Jy; 
             width: alpha in arcsec; axisratio: minor/major; PA: deg CCW from x-axis
+      
+      Note: if `lensed' is True, the positions are relative to the lens center,
+            otherwise they're relative to the field center (or (0,0) coordinates)
       """
 
       def __init__(self,z,lensed=True,xoff=None,yoff=None,flux=None,alpha=None,\
@@ -121,7 +125,10 @@ class GaussSource(object):
       If lensed is True, it's assumed this source is in the background, and we
       lens it; otherwise it's assumed to be a foreground/unlensed object.
 
-      Units of parameters are xoff,yoff: arcsec rel to lens; flux: Jy; width: Gaussian rms in arcsec
+      Units of parameters are xoff,yoff: arcsec; flux: Jy; width: Gaussian rms in arcsec
+      
+      Note: if `lensed' is True, the positions are relative to the lens center,
+            otherwise they're relative to the field center (or (0,0) coordinates)
       """
 
       def __init__(self,z,lensed=True,xoff=None,yoff=None,flux=None,width=None):
@@ -154,6 +161,49 @@ class GaussSource(object):
             self.yoff = yoff
             self.flux = flux
             self.width = width
+            
+class PointSource(object):
+      """
+      Creates an object which is unresolved by the data.
+      
+      The three parameters are the position (xoff,yoff), and integrated flux
+      (flux).
+      
+      If lensed is True, it's assumed this source is in the background, and we
+      lens it; otherwise it's assumed to be a foreground/unlensed object.
+
+      Units of parameters are xoff,yoff: arcsec; flux: Jy
+      
+      Note: if `lensed' is True, the positions are relative to the lens center,
+            otherwise they're relative to the field center (or (0,0) coordinates)
+      """
+      
+      def __init__(self,z,lensed=True,xoff=None,yoff=None,flux=None):
+            # Do some input handling.
+            if not isinstance(xoff,dict):
+                  xoff = {'value':xoff,'fixed':False,'prior':[-10.,10.]}
+            if not isinstance(yoff,dict):
+                  yoff = {'value':yoff,'fixed':False,'prior':[-10.,10.]}
+            if not isinstance(flux,dict):
+                  flux = {'value':flux,'fixed':False,'prior':[1e-5,1.]} # 0.01 to 1Jy source
+
+            if not all(['value' in d for d in [xoff,yoff,flux]]): 
+                  raise KeyError("All parameter dicts must contain the key 'value'.")
+
+            if not 'fixed' in xoff: xoff['fixed'] = False
+            if not 'fixed' in yoff: yoff['fixed'] = False
+            if not 'fixed' in flux: flux['fixed'] = False  
+            
+            if not 'prior' in xoff: xoff['prior'] = [-10.,10.]
+            if not 'prior' in yoff: yoff['prior'] = [-10.,10.]
+            if not 'prior' in flux: flux['prior'] = [1e-5,1.]
+
+            self.z = z
+            self.lensed = lensed
+            self.xoff = xoff
+            self.yoff = yoff
+            self.flux = flux
+
         
 class ExternalShear:
       """

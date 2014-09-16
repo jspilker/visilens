@@ -69,7 +69,7 @@ def calc_vis_lnlike(p,data,lens,source,shear,
                   xmap,ymap,xemit,yemit,indices,Dd,Ds,Dds,sourcedatamap)
             
             # ... and interpolate/sample it at our uv coordinates
-            interpdata = fft_interpolate(dset,immap,xmap,ymap,ug,thisascale[i],thispshift[i])            
+            interpdata = fft_interpolate(dset,immap,xmap,ymap,ug,thisascale[i],thispshift[i])
             
             # If desired, do model-cal on this dataset
             if modelcal[i]:
@@ -131,14 +131,14 @@ def calc_im_lnlike_galfit(p,image,sigma,psf,lens,source,shear,
       # --- TODO ---
 
       # Do the raytracing for this set of lens & shear params
-      if isinstance(thislens,SIELens): xsrc,ysrc = RayTraceSIE(image.xemit,image.yemit,thislens,Dd,Ds,Dds,thisshear)
+      LensRayTrace(image.xemit,image.yemit,thislens,Dd,Ds,Dds,thisshear)
 
       # Now loop through all the datasets, fitting the requested sources to each. We'll also calculate
       # magnifications for each source, defined as the sum of the output flux / input flux
       # Thus, the returned magnification will be an array of length (# of unique sources)
       lnL,mags = 0., np.zeros(len(thissource))
 
-            # Two arrays, one of the lensed sources, the other the full field and any unlensed sources
+      # Two arrays, one of the lensed sources, the other the full field and any unlensed sources
       imsrc = np.zeros(image.xemit.shape)
       immap = np.zeros(image.x.shape)
 
@@ -309,7 +309,7 @@ def create_modelimage(lens,source,shear,xmap,ymap,xemit,yemit,indices,
             Dds= cosmo.angular_diameter_distance_z1z2(lens.z,source[0].z).value
 
       # Do the raytracing for this set of lens & shear params
-      if lens.__class__.__name__=='SIELens': xsrc,ysrc = RayTraceSIE(xemit,yemit,lens,Dd,Ds,Dds,shear)
+      xsrc,ysrc = LensRayTrace(xemit,yemit,lens,Dd,Ds,Dds,shear)
 
       if sourcedatamap is not None: # ... then particular source(s) are specified for this map
             for jsrc in sourcedatamap[i]:
@@ -335,6 +335,7 @@ def create_modelimage(lens,source,shear,xmap,ymap,xemit,yemit,indices,
       immap *= (xmap[0,1]-xmap[0,0])**2.
 
       return immap,mus
+
 
 def fft_interpolate(visdata,immap,xmap,ymap,ug=None,scaleamp=1.,shiftphase=[0.,0.]):
       """
