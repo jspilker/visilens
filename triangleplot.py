@@ -36,6 +36,9 @@ def TrianglePlot_MCMC(mcmcresult,plotmag=True,plotnuisance=False):
       # List of params we'll call "nuisance"
       nuisance = ['xL','yL','ampscale_dset','astromshift_x_dset','astromshift_y_dset']
       allcols = list(mcmcresult['chains'].dtype.names)
+      # Gets rid of mag for unlensed sources, which is always 1.
+      for col in allcols:
+            if 'mu' in col and np.allclose(mcmcresult['chains'][col],1.): allcols.remove(col)
       if not plotmag: 
             try: allcols.remove('mu')
             except: pass # for some reason (yashar's chains?) we didn't have a magnification column
