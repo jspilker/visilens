@@ -251,6 +251,12 @@ def pass_priors(p,lens,source,shear,scaleamp,shiftphase):
                               if p[ip] < vars(src)[key]['prior'][0] or p[ip] > vars(src)[key]['prior'][1]: return False
                               thissource[i].__dict__[key]['value'] = p[ip]
                               ip += 1
+            elif src.__class__.__name__=='PointSource':
+                  for key in ['xoff','yoff','flux']:
+                        if not vars(src)[key]['fixed']:
+                              if p[ip] < vars(src)[key]['prior'][0] or p[ip] > vars(src)[key]['prior'][1]: return False
+                              thissource[i].__dict__[key]['value'] = p[ip]
+                              ip += 1                              
       # now do shear, if any
       if shear is not None:
             for key in ['shear','shearangle']:
