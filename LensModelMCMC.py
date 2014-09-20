@@ -127,7 +127,13 @@ def LensModelMCMC(data,lens,source,shear=None,
                         if not vars(src)[key]['fixed']:
                               ndim += 1
                               p0.append(vars(src)[key]['value'])
-                              colnames.append(key+'S'+str(i))                         
+                              colnames.append(key+'S'+str(i))
+            elif src.__class__.__name__=='PointSource':
+                  for key in ['xoff','yoff','flux']:
+                        if not vars(src)[key]['fixed']:
+                              ndim += 1
+                              p0.append(vars(src)[key]['value'])
+                              colnames.append(key+'S'+str(i))
       # Then shear
       if shear is not None:
             for key in ['shear','shearangle']:
@@ -195,7 +201,7 @@ def LensModelMCMC(data,lens,source,shear=None,
                     sourcedatamap,scaleamp,shiftphase,modelcal],
             threads=nthreads,pool=pool)
 
-      #return initials,lenssampler
+      #return colnames,initials,lenssampler
       
       # Run burn-in phase
       print "Running burn-in... "
