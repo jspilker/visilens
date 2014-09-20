@@ -39,9 +39,7 @@ def TrianglePlot_MCMC(mcmcresult,plotmag=True,plotnuisance=False):
       # Gets rid of mag for unlensed sources, which is always 1.
       for col in allcols:
             if 'mu' in col and np.allclose(mcmcresult['chains'][col],1.): allcols.remove(col)
-      if not plotmag: 
-            try: allcols.remove('mu')
-            except: pass # for some reason (yashar's chains?) we didn't have a magnification column
+      if not plotmag: allcols = [x for x in allcols if not 'mu' in x]
       if not plotnuisance: allcols = [x for x in allcols if not any([l in x for l in nuisance])]
 
       labelmap = {'xL':'$x_{L}$, arcsec','yL':'$y_{L}$, arcsec','ML':'$M_{L}$, $10^{11} M_\odot$',\
