@@ -10,22 +10,39 @@ rad2arcsec =3600.*180./np.pi
 deg2rad = np.pi/180.
 rad2deg = 180./np.pi
 
-__all__ = ['LensRayTrace','RayTraceSIE','CausticsSIE']
+__all__ = ['LensRayTrace','RayTraceSIE','TraceExternalShear','CausticsSIE']
 
-def LensRayTrace(xim,yim,lens,Dd,Ds,Dds,ExternalShear=None):
+def LensRayTrace(xim,yim,lens,Dd,Ds,Dds,shear=None):
       """
       Wrapper to pass off lensing calculations to any number of functions
-      defined below.
+      defined below, accumulating lensing offsets from multiple lenses
+      and shear as we go.
       """
+      # Ensure lens is a list, for convenience
+      lens = list(np.array([lens]).flatten())
       
-      if lens.__class__.__name__=='SIELens':
-            return RayTraceSIE(xim,yim,lens,Dd,Ds,Dds,ExternalShear)
-      else: raise ValueError("Only SIE Lenses supported for now...")
+      ximage = xim.copy()
+      yimage = yim.copy()
+      
+      for i,ilens in enumerate(lens):
+            if ilens.__class__.__name__ == 'SIELens':
+                  dxt,dyt = xim.copy(),yim.copy()
+                  dxt,dyt = RayTraceSIE(dxt,dyt,ilens,Dd,Ds,Dds)
+                  ximage += dxt; yimage += dyt
+                  
+            else: raise ValueError("Only SIE Lenses supported for now...")
+      
+      if shear is not None:
+            dxt,dyt = xim.copy(),yim.copy()
+            dxt,dyt = TraceExternalShear(dxt,dyt,shear)
+            ximage += dxt; yimage += dyt
+      
+      return ximage,yimage
 
-def RayTraceSIE(xim,yim,SIELens,Dd,Ds,Dds,ExternalShear=None):
+def RayTraceSIE(xim,yim,SIELens,Dd,Ds,Dds):
       """
       Routine to transform image-plane coordinates to source-plane coordinates
-      for an SIE lens, including possibility of external shear.
+      for an SIE lens.
 
       Inputs:
       ximage,yimage:
@@ -43,16 +60,11 @@ def RayTraceSIE(xim,yim,SIELens,Dd,Ds,Dds,ExternalShear=None):
             but since redshift is fixed, we can just calculate the distances once
             elsewhere and use those values repeatedly.
 
-      ExternalShear:
-            An ExternalShear object, with shear amount and angle. Defaults to
-            None == no shear.
-
       Returns:
       xsource,ysource:
             Source-plane coordinates for the grid points given in ximage, yimage, in arcsec.
       """
-
-      # lists and numpy arrays are mutable; make copies of the inputs to avoid changing them
+      
       ximage,yimage = xim.copy(), yim.copy()
 
       # Following Kormann+ 1994 for the lensing. Easier to work with axis ratio than ellipticity
@@ -83,37 +95,47 @@ def RayTraceSIE(xim,yim,SIELens,Dd,Ds,Dds,ExternalShear=None):
       # Calculate the transformation of the convergence term; K+94 eq 27a
       # Need to account for case of ellipticity=0 (the SIS), which has canceling infinities
       if np.isclose(f,1.):
-            xsource = ximage - (Xi0/Dd)*np.cos(phi)
-            ysource = yimage - (Xi0/Dd)*np.sin(phi)
+            dxs =  - (Xi0/Dd)*np.cos(phi)
+            dys =  - (Xi0/Dd)*np.sin(phi)
       else:
-            xsource = ximage - (Xi0/Dd)*(np.sqrt(f)/fprime)*np.arcsinh(np.cos(phi)*fprime/f)
-            ysource = yimage - (Xi0/Dd)*(np.sqrt(f)/fprime)*np.arcsin(np.sin(phi)*fprime)
+            dxs = - (Xi0/Dd)*(np.sqrt(f)/fprime)*np.arcsinh(np.cos(phi)*fprime/f)
+            dys = - (Xi0/Dd)*(np.sqrt(f)/fprime)*np.arcsin(np.sin(phi)*fprime)
 
-      # Calculate contribution from shear term; see Chen,Kochanek&Hewitt1995
-      if ExternalShear is not None:
-            gamma,thg = ExternalShear.shear['value'],(ExternalShear.shearangle['value']-SIELens.PA['value'])*deg2rad
-            xsource = xsource - gamma*np.cos(2*thg)*ximage - gamma*np.sin(2*thg)*yimage
-            ysource = ysource - gamma*np.sin(2*thg)*ximage + gamma*np.cos(2*thg)*yimage
-
-      # Rotate and shift the coordinate system back to the way they were
+      # Rotate and shift the coordinate system back to the sky frame
       if not np.isclose(SIELens.PA['value'],0.):
-            r,theta = cart2pol(ximage,yimage)
-            ximage,yimage = pol2cart(r,theta+(SIELens.PA['value']*deg2rad))
+            r,theta = cart2pol(dxs,dys)
+            dxs,dys = pol2cart(r,theta+(SIELens.PA['value']*deg2rad))
 
-            r,theta = cart2pol(xsource,ysource)
-            xsource,ysource = pol2cart(r,theta+(SIELens.PA['value']*deg2rad))
+      dxs *= rad2arcsec
+      dys *= rad2arcsec
+      
+      #print dxs,dys
 
-      ximage += SIELens.x['value']*arcsec2rad
-      yimage += SIELens.y['value']*arcsec2rad
-      xsource += SIELens.x['value']*arcsec2rad
-      ysource += SIELens.y['value']*arcsec2rad
-
-      ximage *= rad2arcsec
-      yimage *= rad2arcsec
-      xsource *= rad2arcsec
-      ysource *= rad2arcsec
-
-      return xsource,ysource
+      return dxs,dys
+      
+def TraceExternalShear(xim,yim,shear):
+      """
+      Calculate deflections due to an external shear component.
+      
+      Inputs:
+      xim,yim:
+            Map coordinates to perform the shear on.
+            
+      shear:
+            An ExternalShear object, which gives the strength and angle of
+            the deflection. The angle is defined in degrees N of E.
+            
+      Returns:
+      xsource,ysource:
+            Deflections calculated for the given inputs.
+      """
+      
+      # Calculate contribution from shear term; see Chen,Kochanek&Hewitt1995
+      gamma,thg = shear.shear['value'],(shear.shearangle['value'])*deg2rad
+      dxs = -gamma*np.cos(2*thg)*xim - gamma*np.sin(2*thg)*yim
+      dys = -gamma*np.sin(2*thg)*xim + gamma*np.cos(2*thg)*yim     
+      
+      return dxs,dys
 
 def CausticsSIE(SIELens,Dd,Ds,Dds,Shear=None):
       """

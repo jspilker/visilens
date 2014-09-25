@@ -95,6 +95,7 @@ def LensModelMCMC(data,lens,source,shear=None,
       else: pool = None
 
       # Making these lists just makes later stuff easier since we now know the dtype
+      lens = list(np.array([lens]).flatten())
       source = list(np.array([source]).flatten()) # Ensure source(s) are a list
       data = list(np.array([data]).flatten())     # Same for dataset(s)
       scaleamp = list(np.array([scaleamp]).flatten())
@@ -107,13 +108,14 @@ def LensModelMCMC(data,lens,source,shear=None,
       # emcee isn't very flexible in terms of how it gets initialized; start by
       # assembling the user-provided info into a form it likes
       ndim, p0, colnames = 0, [], []
-      # Lens first
-      if lens.__class__.__name__=='SIELens':
-            for key in ['x','y','M','e','PA']:
-                  if not vars(lens)[key]['fixed']:
-                        ndim += 1
-                        p0.append(vars(lens)[key]['value'])
-                        colnames.append(key+'L')
+      # Lens(es) first
+      for i,ilens in enumerate(lens):
+            if ilens.__class__.__name__=='SIELens':
+                  for key in ['x','y','M','e','PA']:
+                        if not vars(ilens)[key]['fixed']:
+                              ndim += 1
+                              p0.append(vars(ilens)[key]['value'])
+                              colnames.append(key+'L'+str(i))
       # Then source(s)
       for i,src in enumerate(source):
             if src.__class__.__name__=='GaussSource':
@@ -185,9 +187,9 @@ def LensModelMCMC(data,lens,source,shear=None,
       # Calculate some distances; we only need to calculate these once.
       # This assumes multiple sources are all at same z; should be this
       # way anyway or else we'd have to deal with multiple lensing planes
-      Dd = cosmo.angular_diameter_distance(lens.z).value
+      Dd = cosmo.angular_diameter_distance(lens[0].z).value
       Ds = cosmo.angular_diameter_distance(source[0].z).value
-      Dds= cosmo.angular_diameter_distance_z1z2(lens.z,source[0].z).value
+      Dds= cosmo.angular_diameter_distance_z1z2(lens[0].z,source[0].z).value
 
       p0 = np.array(p0)
       # Create a ball of starting points for the walkers, gaussian ball of 
