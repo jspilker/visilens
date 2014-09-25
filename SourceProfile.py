@@ -20,9 +20,13 @@ def SourceProfile(xsource,ysource,source,lens):
             parameters to create the profile.
 
       Lens:
-            Any supported Lens object, e.g. an SIELens.
-            Just needed because the Source x&y center positions are
-            defined relative to the lens centroid.
+            Any supported Lens object, e.g. an SIELens. We only need
+            this because, in the case of single lenses, the source
+            position is defined as offset from the lens centroid. If
+            there is more than one lens, or if the source is unlensed,
+            the source position is defined **relative to the field 
+            center, aka (0,0) coordinates**.
+            
 
       Returns:
       I:
@@ -33,14 +37,16 @@ def SourceProfile(xsource,ysource,source,lens):
             isn't done here since the lensing means the pixels likely
             aren't on a uniform grid.
       """
+      
+      lens = list(np.array([lens]).flatten())
 
       # First case: a circular Gaussian source.
       if source.__class__.__name__=='GaussSource':
             sigma = source.width['value']
             amp   = source.flux['value']/(2.*np.pi*sigma**2.)
-            if source.lensed:
-                  xs = source.xoff['value'] + lens.x['value']
-                  ys = source.yoff['value'] + lens.y['value']
+            if source.lensed and len(lens)==0:
+                  xs = source.xoff['value'] + lens[0].x['value']
+                  ys = source.yoff['value'] + lens[0].y['value']
             else:
                   xs = source.xoff['value']
                   ys = source.yoff['value']
@@ -48,9 +54,9 @@ def SourceProfile(xsource,ysource,source,lens):
             return amp * np.exp(-0.5 * (np.sqrt((xsource-xs)**2.+(ysource-ys)**2.)/sigma)**2.)
 
       elif source.__class__.__name__=='SersicSource':
-            if source.lensed:
-                  xs = source.xoff['value'] + lens.x['value']
-                  ys = source.yoff['value'] + lens.y['value']
+            if source.lensed and len(lens)==0:
+                  xs = source.xoff['value'] + lens[0].x['value']
+                  ys = source.yoff['value'] + lens[0].y['value']
             else:
                   xs = source.xoff['value']
                   ys = source.yoff['value']
@@ -65,9 +71,9 @@ def SourceProfile(xsource,ysource,source,lens):
             return I0 * np.exp(-(R/alpha)**(1./index))
       
       elif source.__class__.__name__=='PointSource':
-            if source.lensed:
-                  xs = source.xoff['value'] + lens.x['value']
-                  ys = source.yoff['value'] + lens.y['value']
+            if source.lensed and len(lens)==0:
+                  xs = source.xoff['value'] + lens[0].x['value']
+                  ys = source.yoff['value'] + lens[0].y['value']
                   return ValueError("Lensed point sources not working yet... try a"\
                    "gaussian with small width instead...")
             else:
