@@ -42,7 +42,7 @@ def plot_images(data,mcmcresult,returnimages=False,
       """
 
       limits = kwargs.pop('limits',
-            [-imsize*pixsize/2.,+imsize*pixsize/2.,imsize*pixsize/2.,-imsize*pixsize/2.])
+            [-imsize*pixsize/2.,+imsize*pixsize/2.,-imsize*pixsize/2.,+imsize*pixsize/2.])
       cmap = kwargs.pop('cmap',cm.Greys)
       mapcontours = kwargs.pop('mapcontours',np.delete(np.arange(-21,22,3),7))
       rescontours = kwargs.pop('rescontours',np.array([-6,-5,-4,-3,-2,2,3,4,5,6]))
