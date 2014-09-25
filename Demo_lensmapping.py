@@ -1,39 +1,38 @@
 import numpy as np
-from RayTracePixels import RayTraceSIE
-from Model_objs import SIELens,ExternalShear,GaussSource
-from SourceProfile import SourceProfile
+from RayTracePixels import LensRayTrace
+from Model_objs import *
+from SourceProfile import *
 import matplotlib.pyplot as pl
 from matplotlib.widgets import Slider,Button
 from astropy.cosmology import get_current,set_current
 set_current('WMAP9')
 cosmo = get_current()
 
-xim = np.arange(-4,4,.03)
-yim = np.arange(-4,4,.03)
+xim = np.arange(-3,3,.03)
+yim = np.arange(-3,3,.03)
 
 xim,yim = np.meshgrid(xim,yim)
 
-zLens,zSource = 0.8,5.6556
+zLens,zSource = 0.8,5.656
 xLens,yLens = 0.,0.
-MLens,eLens,PALens = 3.73e11,0.55,83.5
-xSource,ySource = 0.245,0.285
-FSource,sSource = 0.023,0.085
+MLens,eLens,PALens = 2.87e11,0.54,96.4
+xSource,ySource,FSource,sSource = 0.216,-0.24,0.023,0.074
 
 Lens = SIELens(zLens,xLens,yLens,MLens,eLens,PALens)
-Source = GaussSource(zSource,xSource,ySource,FSource,sSource)
+Source = GaussSource(zSource,True,xSource,ySource,FSource,sSource)
 Shear = ExternalShear(0.,0.)
 Dd = cosmo.angular_diameter_distance(zLens).value
 Ds = cosmo.angular_diameter_distance(zSource).value
 Dds = cosmo.angular_diameter_distance_z1z2(zLens,zSource).value
 
-xsource,ysource = RayTraceSIE(xim,yim,Lens,Dd,Ds,Dds,ExternalShear=Shear)
+xsource,ysource = LensRayTrace(xim,yim,Lens,Dd,Ds,Dds,shear=Shear)
 
 f = pl.figure()
 ax = f.add_subplot(111,aspect='equal')
 pl.subplots_adjust(bottom=0.25,top=0.98)
 
 #ax.plot(xim,yim,'g-')
-p = ax.plot(xsource,ysource,'b-')
+p = ax.plot(xsource,-ysource,'b-')
 
 # Put in a bunch of sliders to control lensing parameters
 
@@ -69,10 +68,10 @@ def update(val):
       newDds= cosmo.angular_diameter_distance_z1z2(zL,zS).value
       newLens = SIELens(zLens,xL,yL,10**ML,eL,PAL)
       newShear = ExternalShear(sh,sha)
-      xs,ys = RayTraceSIE(xim,yim,newLens,newDd,newDs,newDds,newShear)
+      xs,ys = LensRayTrace(xim,yim,newLens,newDd,newDs,newDds,newShear)
       for i in range(len(xs)):
             p[i].set_xdata(xs[i])
-            p[i].set_ydata(ys[i])
+            p[i].set_ydata(-ys[i])
       f.canvas.draw_idle()
 
 slzL.on_changed(update); slzS.on_changed(update)

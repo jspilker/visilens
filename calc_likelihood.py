@@ -230,13 +230,14 @@ def pass_priors(p,lens,source,shear,scaleamp,shiftphase):
       thispshift = copy.deepcopy(shiftphase)
             
       ip = 0 # current index in p
-      if lens.__class__.__name__=='SIELens':
-            for key in ['x','y','M','e','PA']:
-                  if not vars(lens)[key]['fixed']:
-                        # A uniform prior
-                        if p[ip] < vars(lens)[key]['prior'][0] or p[ip] > vars(lens)[key]['prior'][1]: return False
-                        thislens.__dict__[key]['value'] = p[ip]
-                        ip += 1
+      for i,ilens in enumerate(lens):
+            if ilens.__class__.__name__=='SIELens':
+                  for key in ['x','y','M','e','PA']:
+                        if not vars(ilens)[key]['fixed']:
+                              # A uniform prior
+                              if p[ip] < vars(ilens)[key]['prior'][0] or p[ip] > vars(ilens)[key]['prior'][1]: return False
+                              thislens[i].__dict__[key]['value'] = p[ip]
+                              ip += 1
       # now do the source(s)
       for i,src in enumerate(source): # Source is a list of source objects
             if src.__class__.__name__=='GaussSource':
@@ -301,6 +302,7 @@ def create_modelimage(lens,source,shear,xmap,ymap,xemit,yemit,indices,
             magnifications of each source (1 if unlensed).
       """
       
+      lens = list(np.array([lens]).flatten()) # Ensure lens(es) are a list
       source = list(np.array([source]).flatten()) # Ensure source(s) are a list
       mus = np.zeros(len(source))
       immap, imsrc = np.zeros(xmap.shape), np.zeros(xemit.shape)
@@ -310,7 +312,7 @@ def create_modelimage(lens,source,shear,xmap,ymap,xemit,yemit,indices,
             import astropy.cosmology as ac
             ac.set_current(ac.FlatLambdaCDM(H0=71.,Om0=0.2669))
             cosmo = ac.get_current()
-            Dd = cosmo.angular_diameter_distance(lens.z).value
+            Dd = cosmo.angular_diameter_distance(lens[0].z).value
             Ds = cosmo.angular_diameter_distance(source[0].z).value
             Dds= cosmo.angular_diameter_distance_z1z2(lens.z,source[0].z).value
 
@@ -336,6 +338,9 @@ def create_modelimage(lens,source,shear,xmap,ymap,xemit,yemit,indices,
       imsrc = Image.fromarray(imsrc)
       resize = np.array(imsrc.resize((int(indices[1]-indices[0]),int(indices[3]-indices[2])),Image.ANTIALIAS))
       immap[indices[2]:indices[3],indices[0]:indices[1]] += resize
+
+      # Flip image to match sky coords (so coordinate convention is +y = N, +x = W, angle is deg E of N)
+      immap = immap[::-1,:]
 
       # last, correct for pixel size.
       immap *= (xmap[0,1]-xmap[0,0])**2.
