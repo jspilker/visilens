@@ -3,6 +3,7 @@ from scipy.ndimage.measurements import center_of_mass
 from astropy.stats import sigma_clip
 import matplotlib.pyplot as pl
 import matplotlib.cm as cm
+from matplotlib.colors import SymLogNorm
 from Model_objs import *
 from Data_objs import *
 from uvimage import uvimageslow
@@ -47,6 +48,7 @@ def plot_images(data,mcmcresult,returnimages=False,
       mapcontours = kwargs.pop('mapcontours',np.delete(np.arange(-21,22,3),7))
       rescontours = kwargs.pop('rescontours',np.array([-6,-5,-4,-3,-2,2,3,4,5,6]))
       level = kwargs.pop('level',None)
+      logmodel = kwargs.pop('logmodel',False)
 
       datasets = list(np.array([data]).flatten())
 
@@ -165,14 +167,17 @@ def plot_images(data,mcmcresult,returnimages=False,
                   [0,xemit.shape[1],0,xemit.shape[0]],sourcedatamap)
 
             images[i].append(imemit)
-
-            axarr[i,3].imshow(imemit,interpolation='nearest',\
-                  extent=[xemit.min(),xemit.max(),yemit.max(),yemit.min()],cmap=cmap)
             
             xcen = center_of_mass(imemit)[1]*(xemit[0,1]-xemit[0,0]) + xemit.min()
             ycen = center_of_mass(imemit)[0]*(xemit[0,1]-xemit[0,0]) + yemit.min()
             dx = 0.5*(xemit.max()-xemit.min())
             dy = 0.5*(yemit.max()-yemit.min())
+            
+            if logmodel: norm=SymLogNorm(0.01*imemit.max()) #imemit = np.log10(imemit); vmin = imemit.min()-2.
+            else: norm=None #vmin = imemit.min()
+            axarr[i,3].imshow(imemit,interpolation='nearest',\
+                  extent=[xemit.min(),xemit.max(),yemit.max(),yemit.min()],cmap=cmap,norm=norm)
+            
             axarr[i,3].set_xlim(xcen-dx,xcen+dx); axarr[i,3].set_ylim(ycen+dy,ycen-dy)
             
             s = imdiff.std()
@@ -185,7 +190,8 @@ def plot_images(data,mcmcresult,returnimages=False,
             axarr[i,0].set_title(dset.filename+'\nDirty Image')
             axarr[i,1].set_title('Model Dirty Image')
             axarr[i,2].set_title('Residuals - {0:.1f}{1:s} rms'.format(sig,unit))
-            axarr[i,3].set_title('High-res Model')
+            if logmodel: axarr[i,3].set_title('High-res Model (log-scale)')
+            else: axarr[i,3].set_title('High-res Model')
             
       
 
