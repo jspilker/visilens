@@ -57,16 +57,16 @@ def TrianglePlot_MCMC(mcmcresult,plotmag=True,plotnuisance=False):
       for row,yax in enumerate(allcols):
             for col,xax in enumerate(allcols):
                   x,y = copy.deepcopy(mcmcresult['chains'][xax]), copy.deepcopy(mcmcresult['chains'][yax])
-                  if xax=='ML': x /= 1e11 # to 1e11Msun from Msun
-                  if yax=='ML': y /= 1e11
+                  if 'ML' in xax: x /= 1e11 # to 1e11Msun from Msun
+                  if 'ML' in yax: y /= 1e11
                   if 'fluxS' in xax: x *= 1e3 # to mJy from Jy
                   if 'fluxS' in yax: y *= 1e3 
                   # Figure out the axis labels...
                   if xax[-1].isdigit():
-                        xlab = (xax[-1]+'}').join(labelmap[xax[:-1]].split('}'))
+                        xlab = (xax[-1]+'}$').join(labelmap[xax[:-1]].split('}$'))
                   else: xlab = labelmap[xax]
                   if yax[-1].isdigit():
-                        ylab = (yax[-1]+'}').join(labelmap[yax[:-1]].split('}'))
+                        ylab = (yax[-1]+'}$').join(labelmap[yax[:-1]].split('}$'))
                   else: ylab = labelmap[yax]
 
                   # To counter outlying walkers stuck in regions of low likelihood, we use percentiles

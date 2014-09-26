@@ -131,7 +131,7 @@ def plot_images(data,mcmcresult,returnimages=False,
                   images[i].append(imdata); images[i].append(immodel)#; images[i].append(immap)
             
             # Plot everything up
-            ext = [-imsize*pixsize/2.,imsize*pixsize/2.,imsize*pixsize/2.,-imsize*pixsize/2.]
+            ext = [-imsize*pixsize/2.,imsize*pixsize/2.,-imsize*pixsize/2.,imsize*pixsize/2.]
             # Figure out what to use as the noise level; sum of weights if no user-supplied value
             if level is None: s = ((dset.sigma**-2.).sum())**-0.5
             else:
