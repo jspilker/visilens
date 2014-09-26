@@ -1,6 +1,6 @@
 import numpy as np
 from RayTracePixels import *
-from Model_objs import SIELens,ExternalShear,GaussSource
+from Model_objs import *
 from SourceProfile import SourceProfile
 import matplotlib.pyplot as pl
 import matplotlib.cm as cm
