@@ -314,7 +314,7 @@ def create_modelimage(lens,source,shear,xmap,ymap,xemit,yemit,indices,
             cosmo = ac.get_current()
             Dd = cosmo.angular_diameter_distance(lens[0].z).value
             Ds = cosmo.angular_diameter_distance(source[0].z).value
-            Dds= cosmo.angular_diameter_distance_z1z2(lens.z,source[0].z).value
+            Dds= cosmo.angular_diameter_distance_z1z2(lens[0].z,source[0].z).value
 
       # Do the raytracing for this set of lens & shear params
       xsrc,ysrc = LensRayTrace(xemit,yemit,lens,Dd,Ds,Dds,shear)

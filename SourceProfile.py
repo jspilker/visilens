@@ -44,7 +44,7 @@ def SourceProfile(xsource,ysource,source,lens):
       if source.__class__.__name__=='GaussSource':
             sigma = source.width['value']
             amp   = source.flux['value']/(2.*np.pi*sigma**2.)
-            if source.lensed and len(lens)==0:
+            if source.lensed and len(lens)==1:
                   xs = source.xoff['value'] + lens[0].x['value']
                   ys = source.yoff['value'] + lens[0].y['value']
             else:
@@ -54,7 +54,7 @@ def SourceProfile(xsource,ysource,source,lens):
             return amp * np.exp(-0.5 * (np.sqrt((xsource-xs)**2.+(ysource-ys)**2.)/sigma)**2.)
 
       elif source.__class__.__name__=='SersicSource':
-            if source.lensed and len(lens)==0:
+            if source.lensed and len(lens)==1:
                   xs = source.xoff['value'] + lens[0].x['value']
                   ys = source.yoff['value'] + lens[0].y['value']
             else:
@@ -71,7 +71,7 @@ def SourceProfile(xsource,ysource,source,lens):
             return I0 * np.exp(-(R/alpha)**(1./index))
       
       elif source.__class__.__name__=='PointSource':
-            if source.lensed and len(lens)==0:
+            if source.lensed and len(lens)==1:
                   xs = source.xoff['value'] + lens[0].x['value']
                   ys = source.yoff['value'] + lens[0].y['value']
                   return ValueError("Lensed point sources not working yet... try a"\
