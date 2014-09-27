@@ -16,7 +16,7 @@ arcsec2rad = np.pi/180/3600
 def LensModelMCMC(data,lens,source,shear=None,
                   xmax=30.,highresbox=[-3.,3.,3.,-3.],emitres=None,fieldres=None,
                   sourcedatamap=None, scaleamp=False, shiftphase=False,
-                  modelcal=True,nwalkers=1e3,nburn=1e3,nstep=1e3,nthreads=1,mpirun=False):
+                  modelcal=True,nwalkers=1e3,nburn=1e3,nstep=1e3,pool=None,nthreads=1,mpirun=False):
       """
       Wrapper function which basically takes what the user wants and turns it into the
       format needed for the acutal MCMC lens modeling.
@@ -85,7 +85,8 @@ def LensModelMCMC(data,lens,source,shear=None,
             to return this once mcmcresult is packaged up nicely.
       """
 
-      if mpirun:
+      if pool: nthreads = 1
+      elif mpirun:
             nthreads = 1
             from emcee.utils import MPIPool
             pool = MPIPool(debug=False,loadbalance=True)
@@ -210,7 +211,7 @@ def LensModelMCMC(data,lens,source,shear=None,
       #pos,prob,rstate,mus = lenssampler.run_mcmc(initials,nburn,storechain=False)
       for i,result in enumerate(lenssampler.sample(initials,iterations=nburn,storechain=False)):
             # WTF, el gato?
-            if mpirun: print i,'/',nburn
+            print i,'/',nburn
             pos,prob,rstate,blob = result
       
       
