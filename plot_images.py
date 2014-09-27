@@ -57,10 +57,11 @@ def plot_images(data,mcmcresult,returnimages=False,
 
       # Set up to create the model image. We'll assume the best-fit values are all the medians.
       lens,source = copy.deepcopy(mcmcresult['lens_p0']), copy.deepcopy(mcmcresult['source_p0'])
-      if isinstance(lens,SIELens):
-            for key in ['x','y','M','e','PA']:
-                  if not vars(lens)[key]['fixed']:
-                        lens.__dict__[key]['value'] = np.median(c[key+'L'])
+      for i,ilens in enumerate(lens):
+            if isinstance(ilens,SIELens):
+                  for key in ['x','y','M','e','PA']:
+                        if not vars(ilens)[key]['fixed']:
+                              ilens.__dict__[key]['value'] = np.median(c[key+'L'+str(i)])
       # now do the source(s)
       for i,src in enumerate(source): # Source is a list of source objects
             if isinstance(src,GaussSource):
@@ -69,6 +70,10 @@ def plot_images(data,mcmcresult,returnimages=False,
                               src.__dict__[key]['value'] = np.median(c[key+'S'+str(i)])
             elif isinstance(src,SersicSource):
                   for key in ['xoff','yoff','flux','alpha','index','axisratio','PA']:
+                        if not vars(src)[key]['fixed']:
+                              src.__dict__[key]['value'] = np.median(c[key+'S'+str(i)])
+            elif isinstance(src,PointSource):
+                  for key in ['xoff','yoff','flux']:
                         if not vars(src)[key]['fixed']:
                               src.__dict__[key]['value'] = np.median(c[key+'S'+str(i)])
       
