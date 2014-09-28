@@ -34,7 +34,7 @@ def LensRayTrace(xim,yim,lens,Dd,Ds,Dds,shear=None):
       
       if shear is not None:
             dxt,dyt = xim.copy(),yim.copy()
-            dxt,dyt = TraceExternalShear(dxt,dyt,shear)
+            dxt,dyt = TraceExternalShear(dxt,dyt,lens[0],shear)
             ximage += dxt; yimage += dyt
       
       return ximage,yimage
@@ -113,13 +113,19 @@ def RayTraceSIE(xim,yim,SIELens,Dd,Ds,Dds):
 
       return dxs,dys
       
-def TraceExternalShear(xim,yim,shear):
+def TraceExternalShear(xim,yim,lens,shear):
       """
       Calculate deflections due to an external shear component.
       
       Inputs:
       xim,yim:
             Map coordinates to perform the shear on.
+            
+      lens:
+            A lens object; we use this to shift the coordinate system
+            to be centered on the lens. This should be a single lens,
+            not a list, since external shear isn't really meant to be
+            applied if there are multiple lenses anyway.
             
       shear:
             An ExternalShear object, which gives the strength and angle of
@@ -130,10 +136,19 @@ def TraceExternalShear(xim,yim,shear):
             Deflections calculated for the given inputs.
       """
       
+      ximage,yimage = xim.copy(),yim.copy()
+      
+      ximage -= lens.x['value']
+      yimage -= lens.y['value']
+      
+      if not np.isclose(SIELens.PA['value'], 0.):
+            r,theta = cart2pol(ximage,yimage)
+            ximage,yimage = pol2cart(r,theta-(lens.PA['value']*deg2rad))
+      
       # Calculate contribution from shear term; see Chen,Kochanek&Hewitt1995
-      gamma,thg = shear.shear['value'],(shear.shearangle['value'])*deg2rad
-      dxs = -gamma*np.cos(2*thg)*xim - gamma*np.sin(2*thg)*yim
-      dys = -gamma*np.sin(2*thg)*xim + gamma*np.cos(2*thg)*yim     
+      gamma,thg = shear.shear['value'],(shear.shearangle['value'] - lens.PA['value'])*deg2rad
+      dxs = -gamma*np.cos(2*thg)*ximage - gamma*np.sin(2*thg)*yimage
+      dys = -gamma*np.sin(2*thg)*ximage + gamma*np.cos(2*thg)*yimage  
       
       return dxs,dys
 
