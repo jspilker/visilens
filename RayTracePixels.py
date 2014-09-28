@@ -141,7 +141,7 @@ def TraceExternalShear(xim,yim,lens,shear):
       ximage -= lens.x['value']
       yimage -= lens.y['value']
       
-      if not np.isclose(SIELens.PA['value'], 0.):
+      if not np.isclose(lens.PA['value'], 0.):
             r,theta = cart2pol(ximage,yimage)
             ximage,yimage = pol2cart(r,theta-(lens.PA['value']*deg2rad))
       
