@@ -145,10 +145,10 @@ def TraceExternalShear(xim,yim,lens,shear):
             r,theta = cart2pol(ximage,yimage)
             ximage,yimage = pol2cart(r,theta-(lens.PA['value']*deg2rad))
       
-      # Calculate contribution from shear term; see Chen,Kochanek&Hewitt1995
-      gamma,thg = shear.shear['value'],(shear.shearangle['value'] - lens.PA['value'])*deg2rad
-      dxs = -gamma*np.cos(2*thg)*ximage - gamma*np.sin(2*thg)*yimage
-      dys = -gamma*np.sin(2*thg)*ximage + gamma*np.cos(2*thg)*yimage  
+      # Calculate contribution from shear term; see Chen,Kochanek&Hewitt1995, altered for this coord convention
+      gamma,thg = shear.shear['value'],(shear.shearangle['value'] + lens.PA['value'])*deg2rad
+      dxs = gamma*np.cos(2*thg)*ximage + gamma*np.sin(2*thg)*yimage
+      dys = gamma*np.sin(2*thg)*ximage - gamma*np.cos(2*thg)*yimage  
       
       return dxs,dys
 
