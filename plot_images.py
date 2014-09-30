@@ -167,8 +167,9 @@ def plot_images(data,mcmcresult,returnimages=False,
             #      extent=[xmap.min(),xmap.max(),xmap.max(),xmap.min()],cmap=cmap)
 
             # Give a zoomed-in view in the last panel
-            # Create model image at higher res
-            imemit,_ = create_modelimage(lens,source,shear,xemit,yemit,xemit,yemit,\
+            # Create model image at higher res, remove unlensed sources
+            src = [src for src in source if src.lensed]
+            imemit,_ = create_modelimage(lens,src,shear,xemit,yemit,xemit,yemit,\
                   [0,xemit.shape[1],0,xemit.shape[0]],sourcedatamap)
 
             images[i].append(imemit)
