@@ -81,7 +81,7 @@ def calc_vis_lnlike(p,data,lens,source,shear,
             else: lnL -= (((dset.real - interpdata.real)**2. + (dset.imag - interpdata.imag)**2.)/dset.sigma**2.).sum()
 
       # Last-ditch attempt to keep from hanging
-      if np.isnan(lnL): lnL = -np.inf
+      if np.isnan(lnL): return -np.inf,[np.nan]
       
       return lnL,[mags,dphases]
 

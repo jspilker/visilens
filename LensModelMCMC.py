@@ -230,9 +230,10 @@ def LensModelMCMC(data,lens,source,shear=None,
       blobs = lenssampler.blobs
       mus = np.asarray([[a[0] for a in l] for l in blobs]).flatten(order='F')
       bad = np.asarray([np.any(np.isnan(m)) for m in mus],dtype=bool)
-      mus[bad] *= len(source)
-      mus = np.asarray(list(mus),dtype=float).reshape((-1,len(source)),order='F') # stupid-ass hack
-      bad = bad.reshape((-1,len(source)),order='F')[:,0]
+      #mus[bad] *= len(source)
+      #mus = np.asarray(list(mus),dtype=float).reshape((-1,len(source)),order='F') # stupid-ass hack
+      #bad = bad.reshape((-1,len(source)),order='F')[:,0]
+      mus = np.asarray([mus[i] if not bad[i] else [np.nan,np.nan] for i in range(mus.size)])
       colnames.extend(['mu{0:.0f}'.format(i) for i in range(len(source))])
 
       
