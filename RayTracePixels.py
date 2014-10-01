@@ -148,7 +148,7 @@ def TraceExternalShear(xim,yim,lens,shear):
       # Calculate contribution from shear term; see Keeton,Mao&Witt2000, altered for this coord convention
       gamma,thg = shear.shear['value'],(shear.shearangle['value'] + lens.PA['value'])*deg2rad + np.pi/4.
       dxs = -gamma*np.cos(2*thg)*ximage - gamma*np.sin(2*thg)*yimage
-      dys = -gamma*np.sin(2*thg)*ximage + gamma*np.cos(2*thg)*yimage  
+      dys = -gamma*np.sin(2*thg)*ximage + gamma*np.cos(2*thg)*yimage
       
       return dxs,dys
 

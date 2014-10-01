@@ -10,9 +10,10 @@ from uvimage import uvimageslow
 from calc_likelihood import create_modelimage,fft_interpolate
 from modelcal import model_cal
 from GenerateLensingGrid import GenerateLensingGrid
+from utils import *
 import copy
 
-def plot_images(data,mcmcresult,returnimages=False,
+def plot_images(data,mcmcresult,returnimages=False,plotcombined=False,plotall=False,
                   imsize=512,pixsize=0.2,taper=0.,**kwargs):
       """
       Create a four-panel figure from data and chains,
@@ -29,6 +30,15 @@ def plot_images(data,mcmcresult,returnimages=False,
             If True, will also return a list of numpy arrays
             containing the imaged data, interpolated model, and full-res model.
             Default is False.
+      
+      plotcombined: bool, optional, default False
+            If True, plots only a single row of images, after combining all datasets
+            in `data' and applying any necessary rescaling/shifting contained in
+            `mcmcresult'.
+      
+      plotall: bool, optional, default False
+            If True, plots each dataset in its own row *and* the combined dataset in
+            an extra row.
 
       Returns:
       If returnimages is False:
@@ -58,21 +68,21 @@ def plot_images(data,mcmcresult,returnimages=False,
       # Set up to create the model image. We'll assume the best-fit values are all the medians.
       lens,source = copy.deepcopy(mcmcresult['lens_p0']), copy.deepcopy(mcmcresult['source_p0'])
       for i,ilens in enumerate(lens):
-            if isinstance(ilens,SIELens):
+            if ilens.__class__.__name__ == 'SIELens':
                   for key in ['x','y','M','e','PA']:
                         if not vars(ilens)[key]['fixed']:
                               ilens.__dict__[key]['value'] = np.median(c[key+'L'+str(i)])
       # now do the source(s)
       for i,src in enumerate(source): # Source is a list of source objects
-            if isinstance(src,GaussSource):
+            if src.__class__.__name__ == 'GaussSource':
                   for key in ['xoff','yoff','flux','width']:
                         if not vars(src)[key]['fixed']:
                               src.__dict__[key]['value'] = np.median(c[key+'S'+str(i)])
-            elif isinstance(src,SersicSource):
+            elif src.__class__.__name__ == 'SersicSource':
                   for key in ['xoff','yoff','flux','alpha','index','axisratio','PA']:
                         if not vars(src)[key]['fixed']:
                               src.__dict__[key]['value'] = np.median(c[key+'S'+str(i)])
-            elif isinstance(src,PointSource):
+            elif src.__class__.__name__ == 'PointSource':
                   for key in ['xoff','yoff','flux']:
                         if not vars(src)[key]['fixed']:
                               src.__dict__[key]['value'] = np.median(c[key+'S'+str(i)])
@@ -104,9 +114,21 @@ def plot_images(data,mcmcresult,returnimages=False,
       sourcedatamap = mcmcresult['sourcedatamap'] if 'sourcedatamap' in mcmcresult.keys() else None
       modelcal = mcmcresult['modelcal'] if 'modelcal' in mcmcresult.keys() else [False]*len(datasets)
 
-      f,axarr = pl.subplots(len(datasets),4,figsize=(12,3*len(datasets)))
-      axarr = np.atleast_2d(axarr)
-      images = [[] for _ in range(len(datasets))] # effing mutable lists.
+      
+      if plotall:
+            f,axarr = pl.subplots(len(datasets)+1,4,figsize=(12,3*(len(datasets)+1)))
+            axarr = np.atleast_2d(axarr)
+            images = [[] for _ in range(len(datasets)+1)]
+      elif plotcombined:
+            f,axarr = pl.subplots(1,4,figsize=(12,3))
+            axarr = np.atleast_2d(axarr)
+            images = [[]]
+      else:
+            f,axarr = pl.subplots(len(datasets),4,figsize=(12,3*len(datasets)))
+            axarr = np.atleast_2d(axarr)
+            images = [[] for _ in range(len(datasets))] # effing mutable lists.
+            
+      plotdata,plotinterp = [],[]
       
       for i,dset in enumerate(datasets):
             # Get us some coordinates.
@@ -123,22 +145,37 @@ def plot_images(data,mcmcresult,returnimages=False,
 
             if modelcal[i]: 
                   selfcal,_ = model_cal(dset,interpdata)
-                  imdata = uvimageslow(selfcal,imsize,pixsize,taper)
             
-            else: imdata = uvimageslow(dset,imsize,pixsize,taper)
+            else: 
+                  selfcal = copy.deepcopy(dset)
             
+            plotdata.append(selfcal); plotinterp.append(interpdata)
+            
+      
+      if plotall:
+            plotdata.append(concatvis(plotdata))
+            plotinterp.append(concatvis(plotinterp))      
+      elif plotcombined: 
+            plotdata = [concatvis(plotdata)]
+            plotinterp = [concatvis(plotinterp)]
+
+                  
+      for row in range(axarr.shape[0]):
+            
+            # Image the data
+            imdata = uvimageslow(plotdata[row],imsize,pixsize,taper)
             # Image the model
-            immodel = uvimageslow(interpdata,imsize,pixsize,taper)
+            immodel = uvimageslow(plotinterp[row],imsize,pixsize,taper)
             # And the residuals
             imdiff = imdata - immodel
 
             if returnimages: 
-                  images[i].append(imdata); images[i].append(immodel)#; images[i].append(immap)
+                  images[row].append(imdata); images[i].append(immodel)#; images[i].append(immap)
             
             # Plot everything up
             ext = [-imsize*pixsize/2.,imsize*pixsize/2.,-imsize*pixsize/2.,imsize*pixsize/2.]
             # Figure out what to use as the noise level; sum of weights if no user-supplied value
-            if level is None: s = ((dset.sigma**-2.).sum())**-0.5
+            if level is None: s = ((plotdata[row].sigma**-2.).sum())**-0.5
             else:
                   try:
                         s = [e for e in level][i]
@@ -146,23 +183,23 @@ def plot_images(data,mcmcresult,returnimages=False,
                         s = float(level)
             
             print "Data - Model rms: ",imdiff.std()
-            axarr[i,0].imshow(imdata,interpolation='nearest',extent=ext,cmap=cmap)
-            axarr[i,0].contour(imdata,extent=ext,colors='k',origin='image',levels=s*mapcontours)
-            axarr[i,0].set_xlim(limits[0],limits[1]); axarr[i,0].set_ylim(limits[2],limits[3])
-            axarr[i,1].imshow(immodel,interpolation='nearest',extent=ext,cmap=cmap,\
+            axarr[row,0].imshow(imdata,interpolation='nearest',extent=ext,cmap=cmap)
+            axarr[row,0].contour(imdata,extent=ext,colors='k',origin='image',levels=s*mapcontours)
+            axarr[row,0].set_xlim(limits[0],limits[1]); axarr[row,0].set_ylim(limits[2],limits[3])
+            axarr[row,1].imshow(immodel,interpolation='nearest',extent=ext,cmap=cmap,\
                   vmin=imdata.min(),vmax=imdata.max())
-            axarr[i,1].contour(immodel,extent=ext,colors='k',origin='image',levels=s*mapcontours)
-            axarr[i,1].set_xlim(limits[0],limits[1]); axarr[i,1].set_ylim(limits[2],limits[3])
-            axarr[i,2].imshow(imdiff,interpolation='nearest',extent=ext,cmap=cmap,\
+            axarr[row,1].contour(immodel,extent=ext,colors='k',origin='image',levels=s*mapcontours)
+            axarr[row,1].set_xlim(limits[0],limits[1]); axarr[row,1].set_ylim(limits[2],limits[3])
+            axarr[row,2].imshow(imdiff,interpolation='nearest',extent=ext,cmap=cmap,\
                   vmin=imdata.min(),vmax=imdata.max())
-            axarr[i,2].contour(imdiff,extent=ext,colors='k',origin='image',levels=s*rescontours)
-            axarr[i,2].set_xlim(limits[0],limits[1]); axarr[i,2].set_ylim(limits[2],limits[3])
+            axarr[row,2].contour(imdiff,extent=ext,colors='k',origin='image',levels=s*rescontours)
+            axarr[row,2].set_xlim(limits[0],limits[1]); axarr[row,2].set_ylim(limits[2],limits[3])
             if np.log10(s) < -6.: sig,unit = 1e9*s,'nJy'
             elif np.log10(s) < -3.: sig,unit = 1e6*s,'$\mu$Jy'
             elif np.log10(s) < 0.: sig,unit = 1e3*s,'mJy'
             else: sig,unit = s,'Jy'
-            axarr[i,2].text(0.1,0.1,"1$\sigma$ = {0:.1f}{1:s}".format(sig,unit),
-                  transform=axarr[i,2].transAxes,bbox=dict(fc='w'))
+            axarr[row,2].text(0.1,0.1,"1$\sigma$ = {0:.1f}{1:s}".format(sig,unit),
+                  transform=axarr[row,2].transAxes,bbox=dict(fc='w'))
             #axarr[i,3].imshow(immap,interpolation='nearest',\
             #      extent=[xmap.min(),xmap.max(),xmap.max(),xmap.min()],cmap=cmap)
 
@@ -172,7 +209,7 @@ def plot_images(data,mcmcresult,returnimages=False,
             imemit,_ = create_modelimage(lens,src,shear,xemit,yemit,xemit,yemit,\
                   [0,xemit.shape[1],0,xemit.shape[0]],sourcedatamap)
 
-            images[i].append(imemit)
+            images[row].append(imemit)
             
             xcen = center_of_mass(imemit)[1]*(xemit[0,1]-xemit[0,0]) + xemit.min()
             ycen = center_of_mass(imemit)[0]*(xemit[0,1]-xemit[0,0]) + yemit.min()
@@ -181,10 +218,10 @@ def plot_images(data,mcmcresult,returnimages=False,
             
             if logmodel: norm=SymLogNorm(0.01*imemit.max()) #imemit = np.log10(imemit); vmin = imemit.min()-2.
             else: norm=None #vmin = imemit.min()
-            axarr[i,3].imshow(imemit,interpolation='nearest',\
+            axarr[row,3].imshow(imemit,interpolation='nearest',\
                   extent=[xemit.min(),xemit.max(),yemit.max(),yemit.min()],cmap=cmap,norm=norm)
             
-            axarr[i,3].set_xlim(xcen-dx,xcen+dx); axarr[i,3].set_ylim(ycen+dy,ycen-dy)
+            axarr[row,3].set_xlim(xcen-dx,xcen+dx); axarr[row,3].set_ylim(ycen+dy,ycen-dy)
             
             s = imdiff.std()
             if np.log10(s) < -6.: sig,unit = 1e9*s,'nJy'
@@ -193,11 +230,11 @@ def plot_images(data,mcmcresult,returnimages=False,
             else: sig,unit = s,'Jy'
             
             # Label some axes and such
-            axarr[i,0].set_title(dset.filename+'\nDirty Image')
-            axarr[i,1].set_title('Model Dirty Image')
-            axarr[i,2].set_title('Residuals - {0:.1f}{1:s} rms'.format(sig,unit))
-            if logmodel: axarr[i,3].set_title('High-res Model (log-scale)')
-            else: axarr[i,3].set_title('High-res Model')
+            axarr[row,0].set_title(dset.filename+'\nDirty Image')
+            axarr[row,1].set_title('Model Dirty Image')
+            axarr[row,2].set_title('Residuals - {0:.1f}{1:s} rms'.format(sig,unit))
+            if logmodel: axarr[row,3].set_title('High-res Model (log-scale)')
+            else: axarr[row,3].set_title('High-res Model')
             
       
 

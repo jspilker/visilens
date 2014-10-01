@@ -126,7 +126,7 @@ def concatvis(visdatas):
             newa1= np.concatenate((newa1,vis.ant1))
             newa2= np.concatenate((newa2,vis.ant2))
 
-      return Visdata(newu,newv,newr,newi,news,newa1,newa2,visdatas[0].PBfwhm)      
+      return Visdata(newu,newv,newr,newi,news,newa1,newa2,visdatas[0].PBfwhm,'Combined Data')      
 
 def bin_visibilities(visdata,maxnewsize=None):
       """
