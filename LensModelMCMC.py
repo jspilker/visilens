@@ -223,7 +223,7 @@ def LensModelMCMC(data,lens,source,shear=None,
       if mpirun: pool.close()
       print "Mean acceptance fraction: ",np.mean(lenssampler.acceptance_fraction)
 
-      #return lenssampler.flatchain,lenssampler.blobs,colnames
+      return lenssampler.flatchain,lenssampler.blobs,colnames
       
       # Package up the magnifications and modelcal phases; disregards nan points (where
       # we failed the prior, usu. because a periodic angle wrapped).
@@ -233,7 +233,7 @@ def LensModelMCMC(data,lens,source,shear=None,
       #mus[bad] *= len(source)
       #mus = np.asarray(list(mus),dtype=float).reshape((-1,len(source)),order='F') # stupid-ass hack
       #bad = bad.reshape((-1,len(source)),order='F')[:,0]
-      mus = np.asarray([mus[i] if not bad[i] else [np.nan,np.nan] for i in range(mus.size)])
+      mus = np.atleast_2d(np.asarray([mus[i] if not bad[i] else [np.nan]*len(source) for i in range(mus.size)])).T
       colnames.extend(['mu{0:.0f}'.format(i) for i in range(len(source))])
 
       
