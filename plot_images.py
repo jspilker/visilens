@@ -116,7 +116,7 @@ def plot_images(data,mcmcresult,returnimages=False,plotcombined=False,plotall=Fa
 
       
       if plotall:
-            f,axarr = pl.subplots(len(datasets)+1,4,figsize=(12,3*(len(datasets)+1)))
+            f,axarr = pl.subplots(len(datasets)+1,4,figsize=(12,3.5*(len(datasets)+1)))
             axarr = np.atleast_2d(axarr)
             images = [[] for _ in range(len(datasets)+1)]
       elif plotcombined:
@@ -124,7 +124,7 @@ def plot_images(data,mcmcresult,returnimages=False,plotcombined=False,plotall=Fa
             axarr = np.atleast_2d(axarr)
             images = [[]]
       else:
-            f,axarr = pl.subplots(len(datasets),4,figsize=(12,3*len(datasets)))
+            f,axarr = pl.subplots(len(datasets),4,figsize=(12,3.5*len(datasets)))
             axarr = np.atleast_2d(axarr)
             images = [[] for _ in range(len(datasets))] # effing mutable lists.
             
@@ -230,7 +230,7 @@ def plot_images(data,mcmcresult,returnimages=False,plotcombined=False,plotall=Fa
             else: sig,unit = s,'Jy'
             
             # Label some axes and such
-            axarr[row,0].set_title(dset.filename+'\nDirty Image')
+            axarr[row,0].set_title(plotdata[row].filename+'\nDirty Image')
             axarr[row,1].set_title('Model Dirty Image')
             axarr[row,2].set_title('Residuals - {0:.1f}{1:s} rms'.format(sig,unit))
             if logmodel: axarr[row,3].set_title('High-res Model (log-scale)')
