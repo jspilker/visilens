@@ -146,9 +146,13 @@ def TraceExternalShear(xim,yim,lens,shear):
             ximage,yimage = pol2cart(r,theta-(lens.PA['value']*deg2rad))
       
       # Calculate contribution from shear term; see Keeton,Mao&Witt2000, altered for this coord convention
-      gamma,thg = shear.shear['value'],(shear.shearangle['value'] + lens.PA['value'])*deg2rad + np.pi/4.
+      gamma,thg = shear.shear['value'],(shear.shearangle['value']-lens.PA['value'])*deg2rad
       dxs = -gamma*np.cos(2*thg)*ximage - gamma*np.sin(2*thg)*yimage
       dys = -gamma*np.sin(2*thg)*ximage + gamma*np.cos(2*thg)*yimage
+
+      if not np.isclose(lens.PA['value'],0.):
+            r,theta = cart2pol(dxs,dys)
+            dxs,dys = pol2cart(r,theta+(lens.PA['value']*deg2rad))
       
       return dxs,dys
 
@@ -218,7 +222,7 @@ def CausticsSIE(SIELens,Dd,Ds,Dds,Shear=None):
                   return np.atleast_3d([[xr,yr],[xt,yt]])
 
       else: # Blerg, complicated expressions... Keeton+00, but at least radial pseudo-caustic doesn't depend on shear       
-            s, sa = Shear.shear['value'], (Shear.shearangle['value']-SIELens.PA['value'])*deg2rad            
+            s, sa = Shear.shear['value'], (Shear.shearangle['value']-SIELens.PA['value'])*deg2rad
 
             if np.isclose(f,1.):
                   rcrit = b * (1.+s*np.cos(2*(phi-sa)))/(1.-s**2.)
@@ -229,7 +233,7 @@ def CausticsSIE(SIELens,Dd,Ds,Dds,Shear=None):
                   xt = (np.cos(phi) + s*np.cos(phi-2*sa))*rcrit + xr
                   yt = (np.sin(-phi) - s*np.sin(-phi+2*sa))*rcrit + yr
 
-                  r,th = cart2pol(xt,yt)
+                  r,th = cart2pol(yt,xt)
                   xt,yt = pol2cart(r,th+SIELens.PA['value']*deg2rad)
                   
                   r,th = cart2pol(xr,yr)
@@ -253,4 +257,4 @@ def CausticsSIE(SIELens,Dd,Ds,Dds,Shear=None):
                   r,th = cart2pol(xr,yr)
                   xr,yr = pol2cart(r,th+SIELens.PA['value']*deg2rad)
 
-                  return np.atleast_2d([[xr,yr],[xt,yt]])
+                  return np.atleast_3d([[xr,yr],[xt,yt]])
