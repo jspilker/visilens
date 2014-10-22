@@ -98,6 +98,9 @@ def TrianglePlot_MCMC(mcmcresult,plotmag=True,plotnuisance=False):
                   fontsize='xx-large',transform=axarr[0,-1].transAxes)
             it += 0.2
 
+      axarr[0,-1].text(-0.8,0.7-it,'DIC = {0:.0f}'.format(mcmcresult['best-fit']['DIC']),fontsize='xx-large',\
+            transform=axarr[0,-1].transAxes)
+      
       f.subplots_adjust(hspace=0,wspace=0)
 
       return f,axarr
