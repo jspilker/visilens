@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.special import gamma
 from Model_objs import *
+import warnings
 arcsec2rad = (np.pi/(180.*3600.))
 rad2arcsec =3600.*180./np.pi
 deg2rad = np.pi/180.
@@ -61,14 +62,20 @@ def SourceProfile(xsource,ysource,source,lens):
                   xs = source.xoff['value']
                   ys = source.yoff['value']
             PA, ar = source.PA['value']*deg2rad, source.axisratio['value']
-            alpha, index = source.alpha['value'], source.index['value']
+            reff, index = source.reff['value'], source.index['value']
             dX = (xsource-xs)*np.cos(PA) + (ysource-ys)*np.sin(PA)
             dY = (-(xsource-xs)*np.sin(PA) + (ysource-ys)*np.cos(PA*deg2rad))/ar
             R = np.sqrt(dX**2. + dY**2.)
-            # Backing out from the integral to R=inf of a general sersic profile
-            I0 = source.flux['value']/(2*np.pi * alpha**2. * ar * index * gamma(2*index))
             
-            return I0 * np.exp(-(R/alpha)**(1./index))
+            # Calculate b_n, to make reff enclose half the light; this approx from Ciotti&Bertin99
+            # This approximation good to 1 in 10^4 for n > 0.36; for smaller n it gets worse rapidly!!
+            if index < 0.35: warnings.warn("Sersic index n < 0.35 -- approximation to b_n is very bad in this regime!")
+            bn = 2*index - 1./3. + 4./(405*index) + 46./(25515*index**2) + 131./(1148175*index**3) - 2194697./(30690717750*index**4)
+            
+            # Backing out from the integral to R=inf of a general sersic profile
+            I0 = source.flux['value'] * bn**(2*index) / (2*np.pi*reff**2 * ar * np.exp(bn) * index * gamma(2*index))
+            
+            return I0 * np.expm(-(R/reff)**(1./index))
       
       elif source.__class__.__name__=='PointSource':
             if source.lensed and len(lens)==1:

@@ -247,7 +247,7 @@ def pass_priors(p,lens,source,shear,scaleamp,shiftphase):
                               thissource[i].__dict__[key]['value'] = p[ip]
                               ip += 1
             elif src.__class__.__name__=='SersicSource':
-                  for key in ['xoff','yoff','flux','alpha','index','axisratio','PA']:
+                  for key in ['xoff','yoff','flux','reff','index','axisratio','PA']:
                         if not vars(src)[key]['fixed']:
                               if p[ip] < vars(src)[key]['prior'][0] or p[ip] > vars(src)[key]['prior'][1]: return False
                               thissource[i].__dict__[key]['value'] = p[ip]

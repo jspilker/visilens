@@ -127,7 +127,7 @@ def LensModelMCMC(data,lens,source,shear=None,
                               p0.append(vars(src)[key]['value'])
                               colnames.append(key+'S'+str(i))
             elif src.__class__.__name__=='SersicSource':
-                  for key in ['xoff','yoff','flux','alpha','index','axisratio','PA']:
+                  for key in ['xoff','yoff','flux','reff','index','axisratio','PA']:
                         if not vars(src)[key]['fixed']:
                               ndim += 1
                               p0.append(vars(src)[key]['value'])
@@ -294,7 +294,7 @@ def LensModelMCMC(data,lens,source,shear=None,
                               src.__dict__[key]['value'] = np.median(c[key+'S'+str(i)])
                               pbest.append(np.median(c[key+'S'+str(i)]))
             elif src.__class__.__name__ == 'SersicSource':
-                  for key in ['xoff','yoff','flux','alpha','index','axisratio','PA']:
+                  for key in ['xoff','yoff','flux','reff','index','axisratio','PA']:
                         if not vars(src)[key]['fixed']:
                               src.__dict__[key]['value'] = np.median(c[key+'S'+str(i)])
                               pbest.append(np.median(c[key+'S'+str(i)]))

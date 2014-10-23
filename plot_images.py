@@ -79,7 +79,7 @@ def plot_images(data,mcmcresult,returnimages=False,plotcombined=False,plotall=Fa
                         if not vars(src)[key]['fixed']:
                               src.__dict__[key]['value'] = np.median(c[key+'S'+str(i)])
             elif src.__class__.__name__ == 'SersicSource':
-                  for key in ['xoff','yoff','flux','alpha','index','axisratio','PA']:
+                  for key in ['xoff','yoff','flux','reff','index','axisratio','PA']:
                         if not vars(src)[key]['fixed']:
                               src.__dict__[key]['value'] = np.median(c[key+'S'+str(i)])
             elif src.__class__.__name__ == 'PointSource':
