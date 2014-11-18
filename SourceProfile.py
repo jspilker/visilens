@@ -73,9 +73,9 @@ def SourceProfile(xsource,ysource,source,lens):
             bn = 2*index - 1./3. + 4./(405*index) + 46./(25515*index**2) + 131./(1148175*index**3) - 2194697./(30690717750*index**4)
             
             # Backing out from the integral to R=inf of a general sersic profile
-            I0 = source.flux['value'] * bn**(2*index) / (2*np.pi*reff**2 * ar * np.exp(bn) * index * gamma(2*index))
+            Ieff = source.flux['value'] * bn**(2*index) / (2*np.pi*reff**2 * ar * np.exp(bn) * index * gamma(2*index))
             
-            return I0 * np.expm(-(R/reff)**(1./index))
+            return Ieff * np.exp(-bn*((R/reff)**(1./index)-1.))
       
       elif source.__class__.__name__=='PointSource':
             if source.lensed and len(lens)==1:
