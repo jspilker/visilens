@@ -106,6 +106,7 @@ def LensModelMCMC(data,lens,source,shear=None,
       if len(scaleamp)==1 and len(scaleamp)<len(data): scaleamp *= len(data)
       if len(shiftphase)==1 and len(shiftphase)<len(data): shiftphase *= len(data)
       if len(modelcal)==1 and len(modelcal)<len(data): modelcal *= len(data)
+      if sourcedatamap is None: sourcedatamap = [None]*len(data)
 
       # emcee isn't very flexible in terms of how it gets initialized; start by
       # assembling the user-provided info into a form it likes

@@ -62,11 +62,15 @@ def calc_vis_lnlike(p,data,lens,source,shear,
       # magnifications for each source, defined as the sum of the output flux / input flux
       # Thus, the returned magnification will be an array of length (# of sources)
       lnL,dphases = 0., [[]]*len(data)
+      mus = np.zeros(len(source))
       for i,dset in enumerate(data):
       
             # Make a model of this field.
             immap,mags = create_modelimage(thislens,thissource,thisshear,\
-                  xmap,ymap,xemit,yemit,indices,Dd,Ds,Dds,sourcedatamap)
+                  xmap,ymap,xemit,yemit,indices,Dd,Ds,Dds,sourcedatamap[i])
+                  
+            # Filter non-zero magnifications (only relevant if sourcedatamap)
+            mus[mags != 0 ] = mags[mags != 0]
             
             # ... and interpolate/sample it at our uv coordinates
             interpdata = fft_interpolate(dset,immap,xmap,ymap,ug,thisascale[i],thispshift[i])
@@ -83,7 +87,7 @@ def calc_vis_lnlike(p,data,lens,source,shear,
       # Last-ditch attempt to keep from hanging
       if np.isnan(lnL): return -np.inf,[np.nan]
       
-      return lnL,[mags,dphases]
+      return lnL,[mus,dphases]
 
 
 def calc_im_lnlike_galfit(p,image,sigma,psf,lens,source,shear,
@@ -320,7 +324,7 @@ def create_modelimage(lens,source,shear,xmap,ymap,xemit,yemit,indices,
       xsrc,ysrc = LensRayTrace(xemit,yemit,lens,Dd,Ds,Dds,shear)
 
       if sourcedatamap is not None: # ... then particular source(s) are specified for this map
-            for jsrc in sourcedatamap[i]:
+            for jsrc in sourcedatamap:
                   if source[jsrc].lensed: 
                         ims = SourceProfile(xsrc,ysrc,source[jsrc],lens)
                         imsrc += ims

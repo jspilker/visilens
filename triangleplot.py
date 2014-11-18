@@ -77,8 +77,9 @@ def TrianglePlot_MCMC(mcmcresult,plotmag=True,plotnuisance=False):
                   ymin,ymax = np.median(y)-4*ystd, np.median(y)+4*ystd
                   
                   if row > col:
-                        marginalize_2d(x,y,axarr[row,col],\
+                        try: marginalize_2d(x,y,axarr[row,col],\
                               extent=[xmin,xmax,ymin,ymax],bins=max(np.floor(x.size/1000),50))
+                        except ValueError: print xax,yax; raise ValueError("One of the columns has no dynamic range.")
                         if col > 0: pl.setp(axarr[row,col].get_yticklabels(),visible=False)
                         else: axarr[row,col].set_ylabel(ylab,fontsize='x-large')
                         if row<len(allcols)-1: pl.setp(axarr[row,col].get_xticklabels(),visible=False)
@@ -146,7 +147,7 @@ def marginalize_2d(x,y,axobj,*args,**kwargs):
       # Bin up the samples. Will fail if x or y has no dynamic range
       try:
             H,X,Y = np.histogram2d(x.flatten(),y.flatten(),bins=(Xbins,Ybins))
-      except ValueError: print y[::100]; raise ValueError("One of your columns has no dynamic range... check it.")
+      except ValueError: return ValueError("One of your columns has no dynamic range... check it.")
 
       # Generate contour levels, sort probabilities from most to least likely
       V = 1.0 - np.exp(-0.5*np.asarray(levs)**2.)
