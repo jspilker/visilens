@@ -9,10 +9,8 @@ from astropy.cosmology import get_current,set_current
 set_current('WMAP9')
 cosmo = get_current()
 
-xim = np.arange(-2,2,.005)
-yim = np.arange(-2,2,.005)
-#xim = np.arange(4.0,8.0,0.015)
-#yim = np.arange(-2.5,-6.5,-0.015)
+xim = np.arange(-2,2,.01)
+yim = np.arange(-2,2,.01)
 
 xim,yim = np.meshgrid(xim,yim)
 
@@ -20,24 +18,12 @@ zLens,zSource = 0.8,5.656
 xLens,yLens = 0.,0.
 MLens,eLens,PALens = 2.87e11,0.54,180-96.4
 xSource,ySource,FSource,sSource = 0.216,0.24,0.023,0.074
-#xSource,ySource,FSource,sSource = 0.090,0.141,0.0185,0.111
-
-
-
-
-
-#xSource,ySource = 0.203,0.289
-#FSource,sSource = 0.01925,0.097
-#xSblue,ySblue = 0.144,0.300
-#FSblue,sSblue = 0.273e-3,0.148
-#xSred,ySred = 0.051,0.182
-#FSred,sSred = 0.176e-3, 0.097
-#xSource,ySource, sSource = xSred,ySred,sSred
+shear,shearangle = 0., 0.
 
 
 Lens = SIELens(zLens,xLens,yLens,MLens,eLens,PALens)
 Source = GaussSource(zSource,True,xSource,ySource,FSource,sSource)
-Shear = ExternalShear(0.0,0.)
+Shear = ExternalShear(shear,shearangle)
 Dd = cosmo.angular_diameter_distance(zLens).value
 Ds = cosmo.angular_diameter_distance(zSource).value
 Dds = cosmo.angular_diameter_distance_z1z2(zLens,zSource).value
