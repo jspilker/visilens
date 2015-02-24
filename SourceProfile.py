@@ -69,7 +69,7 @@ def SourceProfile(xsource,ysource,source,lens):
             
             # Calculate b_n, to make reff enclose half the light; this approx from Ciotti&Bertin99
             # This approximation good to 1 in 10^4 for n > 0.36; for smaller n it gets worse rapidly!!
-            if index < 0.35: warnings.warn("Sersic index n < 0.35 -- approximation to b_n is very bad in this regime!")
+            #if index < 0.35: warnings.warn("Sersic index n < 0.35 -- approximation to b_n is very bad in this regime!")
             bn = 2*index - 1./3. + 4./(405*index) + 46./(25515*index**2) + 131./(1148175*index**3) - 2194697./(30690717750*index**4)
             
             # Backing out from the integral to R=inf of a general sersic profile
