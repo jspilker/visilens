@@ -8,7 +8,7 @@ from LensModelMCMC import LensModelMCMC
 from ImageModelMCMC import ImageModelMCMC
 from uvimage import uvimageslow
 from plot_images import plot_images
-from triangleplot import TrianglePlot_MCMC
+from triangleplot import *
 from calc_likelihood import *
 from modelcal import model_cal
 __all__ = ['Visdata','Model_objs','utils',

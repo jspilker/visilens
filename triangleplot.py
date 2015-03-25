@@ -6,7 +6,7 @@ import scipy.ndimage
 import numpy as np
 import copy
 
-__all__ = ['TrianglePlot_MCMC']
+__all__ = ['TrianglePlot_MCMC','marginalize_2d','marginalize_1d']
 
 def TrianglePlot_MCMC(mcmcresult,plotmag=True,plotnuisance=False):
       """

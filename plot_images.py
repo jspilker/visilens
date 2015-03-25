@@ -116,7 +116,7 @@ def plot_images(data,mcmcresult,returnimages=False,plotcombined=False,plotall=Fa
 
       
       if plotall:
-            f,axarr = pl.subplots(len(datasets)+1,4,figsize=(12,3.5*(len(datasets)+1)))
+            f,axarr = pl.subplots(len(datasets)+1,4,figsize=(14,4*(len(datasets)+1)))
             axarr = np.atleast_2d(axarr)
             images = [[] for _ in range(len(datasets)+1)]
       elif plotcombined:
@@ -124,7 +124,7 @@ def plot_images(data,mcmcresult,returnimages=False,plotcombined=False,plotall=Fa
             axarr = np.atleast_2d(axarr)
             images = [[]]
       else:
-            f,axarr = pl.subplots(len(datasets),4,figsize=(12,3.5*len(datasets)))
+            f,axarr = pl.subplots(len(datasets),4,figsize=(14,4*len(datasets)))
             axarr = np.atleast_2d(axarr)
             images = [[] for _ in range(len(datasets))] # effing mutable lists.
             
@@ -212,9 +212,10 @@ def plot_images(data,mcmcresult,returnimages=False,plotcombined=False,plotall=Fa
             images[row].append(imemit)
             
             xcen = center_of_mass(imemit)[1]*(xemit[0,1]-xemit[0,0]) + xemit.min()
-            ycen = center_of_mass(imemit)[0]*(xemit[0,1]-xemit[0,0]) + yemit.min()
+            ycen = -center_of_mass(imemit)[0]*(xemit[0,1]-xemit[0,0]) + yemit.max()
             dx = 0.5*(xemit.max()-xemit.min())
             dy = 0.5*(yemit.max()-yemit.min())
+            
             
             if logmodel: norm=SymLogNorm(0.01*imemit.max()) #imemit = np.log10(imemit); vmin = imemit.min()-2.
             else: norm=None #vmin = imemit.min()
