@@ -50,10 +50,11 @@ class SIELens:
 class SersicSource(object):
       """
       Create a symmetric Sersic profile object, with 
-      I(x,y) = A * exp(-(r/alpha)^(1/n)),
+      I(x,y) = A * exp(-bn*((r/reff)^(1/n)-1)),
       where n is the Sersic index (0.5=gaussian,1=expdisk,4=elliptical),
-      alpha is the scale radius, and r=sqrt(x**2+y**2). To make a non-
+      reff encloses half the light, and r=sqrt(x**2+y**2). To make a non-
       axisymmetric profile, we rescale x and y above to elliptical coords.
+      bn is just a number to make reff enclose half the light.
 
       Specified here by the integrated flux (NOT peak amplitude). This helps
       avoid problems for large indices (even n~4), where tons of flux are
@@ -63,13 +64,13 @@ class SersicSource(object):
       lens it; otherwise it's assumed to be a foreground/unlensed object.
       
       Units of parameters are xoff,yoff: arcsec; flux: Jy; 
-            width: alpha in arcsec; axisratio: minor/major; PA: deg CCW from x-axis
+            width: reff in arcsec; axisratio: minor/major; PA: deg CCW from x-axis
       
       Note: if `lensed' is True, the positions are relative to the lens center,
             otherwise they're relative to the field center (or (0,0) coordinates)
       """
 
-      def __init__(self,z,lensed=True,xoff=None,yoff=None,flux=None,alpha=None,\
+      def __init__(self,z,lensed=True,xoff=None,yoff=None,flux=None,reff=None,\
                   index=None,axisratio=None,PA=None):
             # Do some input handling.
             if not isinstance(xoff,dict):
@@ -78,8 +79,8 @@ class SersicSource(object):
                   yoff = {'value':yoff,'fixed':False,'prior':[-10.,10.]}
             if not isinstance(flux,dict):
                   flux = {'value':flux,'fixed':False,'prior':[1e-5,1.]} # 0.01 to 1Jy source
-            if not isinstance(alpha,dict):
-                  alpha = {'value':alpha,'fixed':False,'prior':[0.,2.]} # arcsec
+            if not isinstance(reff,dict):
+                  alpha = {'value':reff,'fixed':False,'prior':[0.,2.]} # arcsec
             if not isinstance(index,dict):
                   index = {'value':index,'fixed':False,'prior':[1/3.,10]}
             if not isinstance(axisratio,dict):
@@ -87,13 +88,13 @@ class SersicSource(object):
             if not isinstance(PA,dict):
                   PA = {'value':PA,'fixed':False,'prior':[0.,180.]}
 
-            if not all(['value' in d for d in [xoff,yoff,flux,alpha,index,axisratio,PA]]): 
+            if not all(['value' in d for d in [xoff,yoff,flux,reff,index,axisratio,PA]]): 
                   raise KeyError("All parameter dicts must contain the key 'value'.")
 
             if not 'fixed' in xoff: xoff['fixed'] = False
             if not 'fixed' in yoff: yoff['fixed'] = False
             if not 'fixed' in flux: flux['fixed'] = False  
-            if not 'fixed' in alpha: alpha['fixed'] = False
+            if not 'fixed' in reff: reff['fixed'] = False
             if not 'fixed' in index: index['fixed'] = False
             if not 'fixed' in axisratio: axisratio['fixed'] = False
             if not 'fixed' in PA: PA['fixed'] = False
@@ -101,7 +102,7 @@ class SersicSource(object):
             if not 'prior' in xoff: xoff['prior'] = [-10.,10.]
             if not 'prior' in yoff: yoff['prior'] = [-10.,10.]
             if not 'prior' in flux: flux['prior'] = [1e-5,1.]
-            if not 'prior' in alpha: alpha['prior'] = [0.,2.]
+            if not 'prior' in reff: reff['prior'] = [0.,2.]
             if not 'prior' in index: index['prior'] = [1/3.,10]
             if not 'prior' in axisratio: axisratio['prior'] = [0.01,1.]
             if not 'prior' in PA: PA['prior'] = [0.,180.]
@@ -111,7 +112,7 @@ class SersicSource(object):
             self.xoff = xoff
             self.yoff = yoff
             self.flux = flux
-            self.alpha = alpha
+            self.reff = reff
             self.index = index
             self.axisratio = axisratio
             self.PA = PA

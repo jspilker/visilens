@@ -79,7 +79,7 @@ def plot_images(data,mcmcresult,returnimages=False,plotcombined=False,plotall=Fa
                         if not vars(src)[key]['fixed']:
                               src.__dict__[key]['value'] = np.median(c[key+'S'+str(i)])
             elif src.__class__.__name__ == 'SersicSource':
-                  for key in ['xoff','yoff','flux','alpha','index','axisratio','PA']:
+                  for key in ['xoff','yoff','flux','reff','index','axisratio','PA']:
                         if not vars(src)[key]['fixed']:
                               src.__dict__[key]['value'] = np.median(c[key+'S'+str(i)])
             elif src.__class__.__name__ == 'PointSource':
@@ -116,7 +116,7 @@ def plot_images(data,mcmcresult,returnimages=False,plotcombined=False,plotall=Fa
 
       
       if plotall:
-            f,axarr = pl.subplots(len(datasets)+1,4,figsize=(12,3*(len(datasets)+1)))
+            f,axarr = pl.subplots(len(datasets)+1,4,figsize=(14,4*(len(datasets)+1)))
             axarr = np.atleast_2d(axarr)
             images = [[] for _ in range(len(datasets)+1)]
       elif plotcombined:
@@ -124,7 +124,7 @@ def plot_images(data,mcmcresult,returnimages=False,plotcombined=False,plotall=Fa
             axarr = np.atleast_2d(axarr)
             images = [[]]
       else:
-            f,axarr = pl.subplots(len(datasets),4,figsize=(12,3*len(datasets)))
+            f,axarr = pl.subplots(len(datasets),4,figsize=(14,4*len(datasets)))
             axarr = np.atleast_2d(axarr)
             images = [[] for _ in range(len(datasets))] # effing mutable lists.
             
@@ -170,7 +170,7 @@ def plot_images(data,mcmcresult,returnimages=False,plotcombined=False,plotall=Fa
             imdiff = imdata - immodel
 
             if returnimages: 
-                  images[row].append(imdata); images[i].append(immodel)#; images[i].append(immap)
+                  images[row].append(imdata); images[row].append(immodel)#; images[i].append(immap)
             
             # Plot everything up
             ext = [-imsize*pixsize/2.,imsize*pixsize/2.,-imsize*pixsize/2.,imsize*pixsize/2.]
@@ -212,16 +212,17 @@ def plot_images(data,mcmcresult,returnimages=False,plotcombined=False,plotall=Fa
             images[row].append(imemit)
             
             xcen = center_of_mass(imemit)[1]*(xemit[0,1]-xemit[0,0]) + xemit.min()
-            ycen = center_of_mass(imemit)[0]*(xemit[0,1]-xemit[0,0]) + yemit.min()
+            ycen = -center_of_mass(imemit)[0]*(xemit[0,1]-xemit[0,0]) + yemit.max()
             dx = 0.5*(xemit.max()-xemit.min())
             dy = 0.5*(yemit.max()-yemit.min())
+            
             
             if logmodel: norm=SymLogNorm(0.01*imemit.max()) #imemit = np.log10(imemit); vmin = imemit.min()-2.
             else: norm=None #vmin = imemit.min()
             axarr[row,3].imshow(imemit,interpolation='nearest',\
-                  extent=[xemit.min(),xemit.max(),yemit.max(),yemit.min()],cmap=cmap,norm=norm)
+                  extent=[xemit.min(),xemit.max(),yemit.min(),yemit.max()],cmap=cmap,norm=norm)
             
-            axarr[row,3].set_xlim(xcen-dx,xcen+dx); axarr[row,3].set_ylim(ycen+dy,ycen-dy)
+            axarr[row,3].set_xlim(xcen-dx,xcen+dx); axarr[row,3].set_ylim(ycen-dy,ycen+dy)
             
             s = imdiff.std()
             if np.log10(s) < -6.: sig,unit = 1e9*s,'nJy'
@@ -230,7 +231,7 @@ def plot_images(data,mcmcresult,returnimages=False,plotcombined=False,plotall=Fa
             else: sig,unit = s,'Jy'
             
             # Label some axes and such
-            axarr[row,0].set_title(dset.filename+'\nDirty Image')
+            axarr[row,0].set_title(plotdata[row].filename+'\nDirty Image')
             axarr[row,1].set_title('Model Dirty Image')
             axarr[row,2].set_title('Residuals - {0:.1f}{1:s} rms'.format(sig,unit))
             if logmodel: axarr[row,3].set_title('High-res Model (log-scale)')

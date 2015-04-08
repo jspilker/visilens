@@ -44,7 +44,7 @@ def TrianglePlot_MCMC(mcmcresult,plotmag=True,plotnuisance=False):
 
       labelmap = {'xL':'$x_{L}$, arcsec','yL':'$y_{L}$, arcsec','ML':'$M_{L}$, $10^{11} M_\odot$',\
             'eL':'$e_{L}$','PAL':'$\\theta_{L}$, deg E of N','xoffS':'$\Delta x_{S}$, arcsec','yoffS':'$\Delta y_{S}$, arcsec',\
-            'fluxS':'$F_{S}$, mJy','widthS':'$\sigma_{S}$, arcsec','alphaS':'$\\alpha_{S}$, arcsec',\
+            'fluxS':'$F_{S}$, mJy','widthS':'$\sigma_{S}$, arcsec','reffS':'$r_{eff,S}$, arcsec',\
             'indexS':'$n_{S}$','axisratioS':'$b_{S}/\\alpha_{S}$','PAS':'$\phi_{S}$, deg E of N',\
             'shear':'$\gamma$','shearangle':'$\\theta_\gamma$',
             'mu':'$\mu_{}$','ampscale_dset':'$A_{}$',
@@ -77,8 +77,9 @@ def TrianglePlot_MCMC(mcmcresult,plotmag=True,plotnuisance=False):
                   ymin,ymax = np.median(y)-4*ystd, np.median(y)+4*ystd
                   
                   if row > col:
-                        marginalize_2d(x,y,axarr[row,col],\
+                        try: marginalize_2d(x,y,axarr[row,col],\
                               extent=[xmin,xmax,ymin,ymax],bins=max(np.floor(x.size/1000),50))
+                        except ValueError: print xax,yax; raise ValueError("One of the columns has no dynamic range.")
                         if col > 0: pl.setp(axarr[row,col].get_yticklabels(),visible=False)
                         else: axarr[row,col].set_ylabel(ylab,fontsize='x-large')
                         if row<len(allcols)-1: pl.setp(axarr[row,col].get_xticklabels(),visible=False)
@@ -98,6 +99,9 @@ def TrianglePlot_MCMC(mcmcresult,plotmag=True,plotnuisance=False):
                   fontsize='xx-large',transform=axarr[0,-1].transAxes)
             it += 0.2
 
+      axarr[0,-1].text(-0.8,0.7-it,'DIC = {0:.0f}'.format(mcmcresult['best-fit']['DIC']),fontsize='xx-large',\
+            transform=axarr[0,-1].transAxes)
+      
       f.subplots_adjust(hspace=0,wspace=0)
 
       return f,axarr
@@ -143,7 +147,7 @@ def marginalize_2d(x,y,axobj,*args,**kwargs):
       # Bin up the samples. Will fail if x or y has no dynamic range
       try:
             H,X,Y = np.histogram2d(x.flatten(),y.flatten(),bins=(Xbins,Ybins))
-      except ValueError: print y[::100]; raise ValueError("One of your columns has no dynamic range... check it.")
+      except ValueError: return ValueError("One of your columns has no dynamic range... check it.")
 
       # Generate contour levels, sort probabilities from most to least likely
       V = 1.0 - np.exp(-0.5*np.asarray(levs)**2.)

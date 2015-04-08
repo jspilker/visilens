@@ -1,5 +1,5 @@
 import numpy as np
-from RayTracePixels import LensRayTrace
+from RayTracePixels import *
 from Model_objs import *
 from SourceProfile import *
 import matplotlib.pyplot as pl
@@ -15,7 +15,7 @@ xim,yim = np.meshgrid(xim,yim)
 
 zLens,zSource = 0.8,5.656
 xLens,yLens = 0.,0.
-MLens,eLens,PALens = 2.87e11,0.54,96.4
+MLens,eLens,PALens = 2.87e11,0.5,90.
 xSource,ySource,FSource,sSource = 0.216,-0.24,0.023,0.074
 
 Lens = SIELens(zLens,xLens,yLens,MLens,eLens,PALens)
@@ -24,6 +24,7 @@ Shear = ExternalShear(0.,0.)
 Dd = cosmo.angular_diameter_distance(zLens).value
 Ds = cosmo.angular_diameter_distance(zSource).value
 Dds = cosmo.angular_diameter_distance_z1z2(zLens,zSource).value
+caustics = CausticsSIE(Lens,Dd,Ds,Dds,Shear)
 
 xsource,ysource = LensRayTrace(xim,yim,Lens,Dd,Ds,Dds,shear=Shear)
 
@@ -32,7 +33,12 @@ ax = f.add_subplot(111,aspect='equal')
 pl.subplots_adjust(bottom=0.25,top=0.98)
 
 #ax.plot(xim,yim,'g-')
-p = ax.plot(xsource,-ysource,'b-')
+ax.plot(xsource,ysource,'b-')
+for i in range(caustics.shape[0]):
+      ax.plot(caustics[i,0,:],caustics[i,1,:],'k-')
+
+#ax.set_xlim(-0.5,0.5)
+#ax.set_ylim(-0.5,0.5)
 
 # Put in a bunch of sliders to control lensing parameters
 
@@ -68,10 +74,17 @@ def update(val):
       newDds= cosmo.angular_diameter_distance_z1z2(zL,zS).value
       newLens = SIELens(zLens,xL,yL,10**ML,eL,PAL)
       newShear = ExternalShear(sh,sha)
-      xs,ys = LensRayTrace(xim,yim,newLens,newDd,newDs,newDds,newShear)
-      for i in range(len(xs)):
-            p[i].set_xdata(xs[i])
-            p[i].set_ydata(-ys[i])
+      xsource,ysource = LensRayTrace(xim,yim,newLens,newDd,newDs,newDds,newShear)
+      caustics = CausticsSIE(newLens,Dd,Ds,Dds,newShear)
+      ax.cla()
+      ax.plot(xsource,ysource,'b-')
+      for i in range(caustics.shape[0]):
+            ax.plot(caustics[i,0,:],caustics[i,1,:],'k-')
+      #ax.set_xlim(-0.5,0.5)
+      #ax.set_ylim(-0.5,0.5)
+      #for i in range(len(xs)):
+      #      p[i].set_xdata(xs[i])
+      #      p[i].set_ydata(ys[i])
       f.canvas.draw_idle()
 
 slzL.on_changed(update); slzS.on_changed(update)
@@ -87,6 +100,5 @@ def reset(event):
       slML.reset(); sleL.reset(); slPAL.reset()
       slss.reset(); slsa.reset()
 button.on_clicked(reset)
-
 
 pl.show()

@@ -4,6 +4,7 @@ import scipy.sparse.linalg
 import os
 import sys
 import emcee
+import copy
 from Model_objs import *
 from GenerateLensingGrid import GenerateLensingGrid
 from calc_likelihood import calc_vis_lnlike
@@ -105,6 +106,7 @@ def LensModelMCMC(data,lens,source,shear=None,
       if len(scaleamp)==1 and len(scaleamp)<len(data): scaleamp *= len(data)
       if len(shiftphase)==1 and len(shiftphase)<len(data): shiftphase *= len(data)
       if len(modelcal)==1 and len(modelcal)<len(data): modelcal *= len(data)
+      if sourcedatamap is None: sourcedatamap = [None]*len(data)
 
       # emcee isn't very flexible in terms of how it gets initialized; start by
       # assembling the user-provided info into a form it likes
@@ -126,7 +128,7 @@ def LensModelMCMC(data,lens,source,shear=None,
                               p0.append(vars(src)[key]['value'])
                               colnames.append(key+'S'+str(i))
             elif src.__class__.__name__=='SersicSource':
-                  for key in ['xoff','yoff','flux','alpha','index','axisratio','PA']:
+                  for key in ['xoff','yoff','flux','reff','index','axisratio','PA']:
                         if not vars(src)[key]['fixed']:
                               ndim += 1
                               p0.append(vars(src)[key]['value'])
@@ -233,10 +235,10 @@ def LensModelMCMC(data,lens,source,shear=None,
       blobs = lenssampler.blobs
       mus = np.asarray([[a[0] for a in l] for l in blobs]).flatten(order='F')
       bad = np.asarray([np.any(np.isnan(m)) for m in mus],dtype=bool)
-      #mus[bad] *= len(source)
-      #mus = np.asarray(list(mus),dtype=float).reshape((-1,len(source)),order='F') # stupid-ass hack
-      #bad = bad.reshape((-1,len(source)),order='F')[:,0]
-      mus = np.asarray([mus[i] if not bad[i] else [np.nan,np.nan] for i in range(mus.size)])
+      mus[bad] *= len(source)
+      mus = np.asarray(list(mus),dtype=float).reshape((-1,len(source)),order='F') # stupid-ass hack
+      bad = bad.reshape((-1,len(source)),order='F')[:,0]
+      #mus = np.atleast_2d(np.asarray([mus[i] if not bad[i] else [np.nan]*len(source) for i in range(mus.size)])).T
       colnames.extend(['mu{0:.0f}'.format(i) for i in range(len(source))])
 
       
@@ -273,6 +275,82 @@ def LensModelMCMC(data,lens,source,shear=None,
       mcmcresult['chains'] = np.core.records.fromarrays(np.hstack((lenssampler.flatchain[~bad],mus[~bad])).T,names=colnames)
       mcmcresult['lnlike'] = lenssampler.flatlnprobability[~bad]
       
+      # Keep track of best-fit params, derived from chains.
+      c = copy.deepcopy(mcmcresult['chains'])
+      mcmcresult['best-fit'] = {}
+      pbest = []
+      # Calculate the best fit values as medians of each param
+      lens,source = copy.deepcopy(mcmcresult['lens_p0']), copy.deepcopy(mcmcresult['source_p0'])
+      for i,ilens in enumerate(lens):
+            if ilens.__class__.__name__ == 'SIELens':
+                  for key in ['x','y','M','e','PA']:
+                        if not vars(ilens)[key]['fixed']:
+                              ilens.__dict__[key]['value'] = np.median(c[key+'L'+str(i)])
+                              pbest.append(np.median(c[key+'L'+str(i)]))
+      
+      mcmcresult['best-fit']['lens'] = lens
+
+      # now do the source(s)
+      for i,src in enumerate(source): # Source is a list of source objects
+            if src.__class__.__name__ == 'GaussSource':
+                  for key in ['xoff','yoff','flux','width']:
+                        if not vars(src)[key]['fixed']:
+                              src.__dict__[key]['value'] = np.median(c[key+'S'+str(i)])
+                              pbest.append(np.median(c[key+'S'+str(i)]))
+            elif src.__class__.__name__ == 'SersicSource':
+                  for key in ['xoff','yoff','flux','reff','index','axisratio','PA']:
+                        if not vars(src)[key]['fixed']:
+                              src.__dict__[key]['value'] = np.median(c[key+'S'+str(i)])
+                              pbest.append(np.median(c[key+'S'+str(i)]))
+            elif src.__class__.__name__ == 'PointSource':
+                  for key in ['xoff','yoff','flux']:
+                        if not vars(src)[key]['fixed']:
+                              src.__dict__[key]['value'] = np.median(c[key+'S'+str(i)])
+                              pbest.append(np.median(c[key+'S'+str(i)]))
+
+      mcmcresult['best-fit']['source'] = source
+      mcmcresult['best-fit']['magnification'] = np.median(mus[~bad],axis=0)
+
+      # now do shear, if any
+      if 'shear_p0' in mcmcresult.keys():
+            shear = mcmcresult['shear_p0']
+            for key in ['shear','shearangle']:
+                  if not vars(shear)[key]['fixed']:
+                        shear.__dict__[key]['value'] = np.median(c[key])
+                        pbest.append(np.median(c[key]))
+            mcmcresult['best-fit']['shear'] = shear
+      else: mcmcresult['best-fit']['shear'] = None
+
+      # Any amplitude scaling or astrometric shifts
+      bfscaleamp = np.ones(len(data))
+      if 'scaleamp' in mcmcresult.keys():
+            for i,t in enumerate(mcmcresult['scaleamp']): # only matters if >1 datasets
+                  if i==0: pass
+                  elif t: 
+                        bfscaleamp[i] = np.median(c['ampscale_dset'+str(i)])
+                        pbest.append(np.median(c['ampscale_dset'+str(i)]))
+                  else: pass
+      mcmcresult['best-fit']['scaleamp'] = bfscaleamp
+      
+      bfshiftphase = np.zeros((len(data),2))
+      if 'shiftphase' in mcmcresult.keys():
+            for i,t in enumerate(mcmcresult['shiftphase']):
+                  if i==0: pass # only matters if >1 datasets
+                  elif t:
+                        bfshiftphase[i][0] = np.median(c['astromshift_x_dset'+str(i)])
+                        bfshiftphase[i][1] = np.median(c['astromshift_y_dset'+str(i)])
+                        pbest.append(np.median(c['astromshift_x_dset'+str(i)]))
+                        pbest.append(np.median(c['astromshift_y_dset'+str(i)]))
+                  else: pass # no shifting
+      mcmcresult['best-fit']['shiftphase'] = bfshiftphase
+      
+      mcmcresult['best-fit']['lnlike'] = calc_vis_lnlike(pbest,data,mcmcresult['best-fit']['lens'],
+            mcmcresult['best-fit']['source'],mcmcresult['best-fit']['shear'],
+            Dd,Ds,Dds,ug,xmap,ymap,xemit,yemit,indices,
+            sourcedatamap,scaleamp,shiftphase,modelcal)[0]
+      
+      # Calculate the deviance information criterion, using the Spiegelhalter+02 definition (cf Gelman+04)
+      mcmcresult['best-fit']['DIC'] = -4*np.mean(mcmcresult['lnlike']) + 2*mcmcresult['best-fit']['lnlike']
       
       # If we did any modelcal stuff, keep the antenna phase offsets here
       if any(modelcal): 
