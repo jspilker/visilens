@@ -6,7 +6,7 @@ import scipy.ndimage
 import numpy as np
 import copy
 
-__all__ = ['TrianglePlot_MCMC']
+__all__ = ['TrianglePlot_MCMC','marginalize_2d','marginalize_1d']
 
 def TrianglePlot_MCMC(mcmcresult,plotmag=True,plotnuisance=False):
       """
@@ -163,9 +163,9 @@ def marginalize_2d(x,y,axobj,*args,**kwargs):
       clevs = np.append(V,Hflat.max())
       X1, Y1 = 0.5*(X[1:] + X[:-1]), 0.5*(Y[1:]+Y[:-1])
 
-
-      axobj.contourf(X1,Y1,H.T,clevs,colors=cmap)
-      axobj.contour(X1,Y1,H.T,clevs,colors=kwargs.get('colors','k'),linewidths=kwargs.get('linewidths',1.5))
+      if kwargs.get('plotfilled',True): axobj.contourf(X1,Y1,H.T,clevs,colors=cmap)
+      axobj.contour(X1,Y1,H.T,clevs,colors=kwargs.get('colors','k'),linewidths=kwargs.get('linewidths',1.5),\
+            linestyles=kwargs.get('linestyles','solid'))
       axobj.set_xlim(extent[0],extent[1])
       axobj.set_ylim(extent[2],extent[3])
 
