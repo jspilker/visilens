@@ -219,7 +219,10 @@ def LensModelMCMC(data,lens,source,shear=None,
       
       # Run actual chains
       print "Done. Running chains... "
-      lenssampler.run_mcmc(pos,nstep,rstate0=rstate)
+      for i,result in enumerate(lenssampler.sample(pos,lnprob0=prob,rstate0=rstate,iterations=nstep,storechain=True)):
+            print i,'/',nstep
+      
+      #lenssampler.run_mcmc(pos,nstep,rstate0=rstate)
       if mpirun: pool.close()
       print "Mean acceptance fraction: ",np.mean(lenssampler.acceptance_fraction)
 
