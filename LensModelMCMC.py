@@ -213,7 +213,7 @@ def LensModelMCMC(data,lens,source,shear=None,
       #pos,prob,rstate,mus = lenssampler.run_mcmc(initials,nburn,storechain=False)
       for i,result in enumerate(lenssampler.sample(initials,iterations=nburn,storechain=False)):
             # WTF, el gato?
-            print i,'/',nburn
+            print 'Burn-in step ',i,'/',nburn
             pos,prob,rstate,blob = result
       
       
@@ -221,8 +221,8 @@ def LensModelMCMC(data,lens,source,shear=None,
       
       # Run actual chains
       print "Done. Running chains... "
-      for i,result in enumerate(lenssampler.sample(pos,lnprob0=prob,rstate0=rstate,iterations=nstep,storechain=True)):
-            print i,'/',nstep
+      for i,result in enumerate(lenssampler.sample(pos,rstate0=rstate,iterations=nstep,storechain=True)):
+            print 'Chain step ',i,'/',nstep
       
       #lenssampler.run_mcmc(pos,nstep,rstate0=rstate)
       if mpirun: pool.close()
