@@ -234,10 +234,11 @@ def LensModelMCMC(data,lens,source,shear=None,
       # we failed the prior, usu. because a periodic angle wrapped).
       blobs = lenssampler.blobs
       mus = np.asarray([[a[0] for a in l] for l in blobs]).flatten(order='F')
-      bad = np.asarray([np.any(np.isnan(m)) for m in mus],dtype=bool)
-      mus[bad] *= len(source)
+      bad = np.where(np.asarray([np.any(np.isnan(m)) for m in mus],dtype=bool))[0]
+      for k in bad: mus[k] = np.array([np.nan]*len(source))
       mus = np.asarray(list(mus),dtype=float).reshape((-1,len(source)),order='F') # stupid-ass hack
-      bad = bad.reshape((-1,len(source)),order='F')[:,0]
+      bad = np.isnan(mus)[:,0]
+      #bad = bad.reshape((-1,len(source)),order='F')[:,0]
       #mus = np.atleast_2d(np.asarray([mus[i] if not bad[i] else [np.nan]*len(source) for i in range(mus.size)])).T
       colnames.extend(['mu{0:.0f}'.format(i) for i in range(len(source))])
 
