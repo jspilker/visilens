@@ -5,16 +5,13 @@ import emcee
 from Model_objs import *
 from GenerateLensingGrid import GenerateLensingGrid
 from calc_likelihood import calc_im_lnlike_galfit
-import astropy.cosmology as ac
-ac.set_current(ac.FlatLambdaCDM(H0=71.,Om0=0.2669))
-#ac.set_current(ac.WMAP9)
-cosmo = ac.get_current()
+
 arcsec2rad = np.pi/180/3600
 
 def ImageModelMCMC(image,psf,sigma,lens,source,shear=None,
                   highresbox=[-3.,3.,-3.,3.],emitres=None,
                   #GALFITPARAMS GO HERE....
-                  nwalkers=1e3,nburn=1e3,nstep=1e3,nthreads=1):
+                  cosmo=None,nwalkers=1e3,nburn=1e3,nstep=1e3,nthreads=1):
       """
       Wrapper function which basically takes what the user wants and turns it into the
       format needed for the acutal MCMC lens modeling.
@@ -141,6 +138,7 @@ def ImageModelMCMC(image,psf,sigma,lens,source,shear=None,
       # Calculate some distances; we only need to calculate these once.
       # This assumes multiple sources are all at same z; should be this
       # way anyway or else we'd have to deal with multiple lensing planes
+      if cosmo is None: from astropy.cosmology import WMAP9 as cosmo
       Dd = cosmo.angular_diameter_distance(lens.z).value
       Ds = cosmo.angular_diameter_distance(source[0].z).value
       Dds= cosmo.angular_diameter_distance_z1z2(lens.z,source[0].z).value

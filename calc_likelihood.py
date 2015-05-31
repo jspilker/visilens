@@ -15,6 +15,7 @@ arcsec2rad = np.pi/180/3600
 __all__ = ['calc_vis_lnlike','calc_im_lnlike_galfit','pass_priors',
             'create_modelimage','fft_interpolate']
 
+
 def calc_vis_lnlike(p,data,lens,source,shear,
                     Dd,Ds,Dds,ug,xmap,ymap,xemit,yemit,indices,
                     sourcedatamap=None,scaleamp=False,shiftphase=False,modelcal=True):
@@ -311,11 +312,9 @@ def create_modelimage(lens,source,shear,xmap,ymap,xemit,yemit,indices,
       mus = np.zeros(len(source))
       immap, imsrc = np.zeros(xmap.shape), np.zeros(xemit.shape)
 
-      # If we didn't get pre-calculated distances, figure them here.
+      # If we didn't get pre-calculated distances, figure them here assuming WMAP9
       if np.any((Dd is None,Ds is None, Dds is None)):
-            import astropy.cosmology as ac
-            ac.set_current(ac.FlatLambdaCDM(H0=71.,Om0=0.2669))
-            cosmo = ac.get_current()
+            from astropy.cosmology import WMAP9 as cosmo
             Dd = cosmo.angular_diameter_distance(lens[0].z).value
             Ds = cosmo.angular_diameter_distance(source[0].z).value
             Dds= cosmo.angular_diameter_distance_z1z2(lens[0].z,source[0].z).value

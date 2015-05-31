@@ -5,9 +5,8 @@ from SourceProfile import SourceProfile
 import matplotlib.pyplot as pl
 import matplotlib.cm as cm
 from matplotlib.widgets import Slider,Button
-from astropy.cosmology import get_current,set_current
-set_current('WMAP9')
-cosmo = get_current()
+from astropy.cosmology import WMAP9 as cosmo
+
 
 xim = np.arange(-2,2,.01)
 yim = np.arange(-2,2,.01)

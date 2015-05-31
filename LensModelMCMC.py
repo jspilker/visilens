@@ -8,16 +8,13 @@ import copy
 from Model_objs import *
 from GenerateLensingGrid import GenerateLensingGrid
 from calc_likelihood import calc_vis_lnlike
-import astropy.cosmology as ac
-ac.set_current(ac.FlatLambdaCDM(H0=71.,Om0=0.2669))
-#ac.set_current(ac.WMAP9)
-cosmo = ac.get_current()
 arcsec2rad = np.pi/180/3600
 
 def LensModelMCMC(data,lens,source,shear=None,
                   xmax=30.,highresbox=[-3.,3.,3.,-3.],emitres=None,fieldres=None,
                   sourcedatamap=None, scaleamp=False, shiftphase=False,
-                  modelcal=True,nwalkers=1e3,nburn=1e3,nstep=1e3,pool=None,nthreads=1,mpirun=False):
+                  modelcal=True,cosmo=None,
+                  nwalkers=1e3,nburn=1e3,nstep=1e3,pool=None,nthreads=1,mpirun=False):
       """
       Wrapper function which basically takes what the user wants and turns it into the
       format needed for the acutal MCMC lens modeling.
@@ -56,6 +53,9 @@ def LensModelMCMC(data,lens,source,shear=None,
             Similar to scaleamp above, but allowing for positional/astrometric offsets.
       modelcal:
             Whether or not to perform the pseudo-selfcal procedure of H+13
+      cosmo:
+            The cosmology to use, as an astropy object, e.g.,
+            from astropy.cosmology import WMAP9; cosmo=WMAP9
       nwalkers:
             Number of walkers to use in the mcmc process; see dan.iel.fm/emcee/current
             for more details.
@@ -190,6 +190,7 @@ def LensModelMCMC(data,lens,source,shear=None,
       # Calculate some distances; we only need to calculate these once.
       # This assumes multiple sources are all at same z; should be this
       # way anyway or else we'd have to deal with multiple lensing planes
+      if cosmo is None: from astropy.cosmology import WMAP9 as cosmo
       Dd = cosmo.angular_diameter_distance(lens[0].z).value
       Ds = cosmo.angular_diameter_distance(source[0].z).value
       Dds= cosmo.angular_diameter_distance_z1z2(lens[0].z,source[0].z).value
