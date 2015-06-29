@@ -64,7 +64,7 @@ def SourceProfile(xsource,ysource,source,lens):
             PA, ar = source.PA['value']*deg2rad, source.axisratio['value']
             reff, index = source.reff['value'], source.index['value']
             dX = (xsource-xs)*np.cos(PA) + (ysource-ys)*np.sin(PA)
-            dY = (-(xsource-xs)*np.sin(PA) + (ysource-ys)*np.cos(PA*deg2rad))/ar
+            dY = (-(xsource-xs)*np.sin(PA) + (ysource-ys)*np.cos(PA))/ar
             R = np.sqrt(dX**2. + dY**2.)
             
             # Calculate b_n, to make reff enclose half the light; this approx from Ciotti&Bertin99

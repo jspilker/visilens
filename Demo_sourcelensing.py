@@ -16,12 +16,12 @@ xim,yim = np.meshgrid(xim,yim)
 zLens,zSource = 0.8,5.656
 xLens,yLens = 0.,0.
 MLens,eLens,PALens = 2.87e11,0.54,180-96.4
-xSource,ySource,FSource,sSource = 0.216,0.24,0.023,0.074
+xSource,ySource,FSource,sSource,nSource,arSource,PAsource = 0.216,0.24,0.023,0.074,0.5,0.7,45.
 shear,shearangle = 0., 0.
 
 
 Lens = SIELens(zLens,xLens,yLens,MLens,eLens,PALens)
-Source = GaussSource(zSource,True,xSource,ySource,FSource,sSource)
+Source = SersicSource(zSource,True,xSource,ySource,FSource,sSource,nSource,arSource,PAsource)
 Shear = ExternalShear(shear,shearangle)
 Dd = cosmo.angular_diameter_distance(zLens).value
 Ds = cosmo.angular_diameter_distance(zSource).value
@@ -68,6 +68,9 @@ axxS = pl.axes([0.56,ytop-9*ystep,0.4,0.03],axisbg=axcolor)
 axyS = pl.axes([0.56,ytop-10*ystep,0.4,0.03],axisbg=axcolor)
 axFS = pl.axes([0.56,ytop-11*ystep,0.4,0.03],axisbg=axcolor)
 axwS = pl.axes([0.56,ytop-12*ystep,0.4,0.03],axisbg=axcolor)
+axnS = pl.axes([0.56,ytop-13*ystep,0.4,0.03],axisbg=axcolor)
+axarS = pl.axes([0.56,ytop-14*ystep,0.4,0.03],axisbg=axcolor)
+axPAS = pl.axes([0.56,ytop-15*ystep,0.4,0.03],axisbg=axcolor)
 
 slzL = Slider(axzL,"z$_{Lens}$",0.01,3.0,valinit=zLens)
 slzS = Slider(axzS,"z$_{Source}$",slzL.val,10.0,valinit=zSource)
@@ -81,7 +84,10 @@ slsa = Slider(axsa,"Angle",0.,180.,valinit=Shear.shearangle['value'])
 slxs = Slider(axxS,"x$_{Source}$",-1.5,1.5,valinit=xSource)
 slys = Slider(axyS,"y$_{Source}$",-1.5,1.5,valinit=ySource)
 slFs = Slider(axFS,"S$_{Source}$",0.01,1.,valinit=FSource)
-slws = Slider(axwS,"$\sigma_{Source}$",0.001,0.3,valinit=sSource)
+slws = Slider(axwS,"$r_{Source}$",0.001,0.3,valinit=sSource)
+slns = Slider(axnS,"n$_{Source}$",0.3,3.,valinit=nSource)
+slars = Slider(axarS,"AR$_{Source}$",0.1,1.,valinit=arSource)
+slPAs = Slider(axPAS,"PA$_{Source}$",-180,180,valinit=PAsource)
 
 def update(val):
       zL,zS = slzL.val,slzS.val
@@ -90,12 +96,13 @@ def update(val):
       sh,sha = slss.val,slsa.val
       xs,ys = slxs.val, slys.val
       Fs,ws = slFs.val, slws.val
+      ns,ars,pas = slns.val,slars.val,slPAs.val
       newDd = cosmo.angular_diameter_distance(zL).value
       newDs = cosmo.angular_diameter_distance(zS).value
       newDds= cosmo.angular_diameter_distance_z1z2(zL,zS).value
       newLens = SIELens(zLens,xL,yL,10**ML,eL,PAL)
       newShear = ExternalShear(sh,sha)
-      newSource = GaussSource(zS,True,xs,ys,Fs,ws)
+      newSource = SersicSource(zS,True,xs,ys,Fs,ws,ns,ars,pas)
       xs,ys = LensRayTrace(xim,yim,newLens,newDd,newDs,newDds,newShear)
       imbg = SourceProfile(xim,yim,newSource,newLens)
       imlensed = SourceProfile(xs,ys,newSource,newLens)
@@ -117,8 +124,9 @@ slML.on_changed(update); sleL.on_changed(update); slPAL.on_changed(update)
 slss.on_changed(update); slsa.on_changed(update)
 slxs.on_changed(update); slys.on_changed(update)
 slFs.on_changed(update); slws.on_changed(update)
+slns.on_changed(update); slars.on_changed(update); slPAs.on_changed(update)
 
-resetax = pl.axes([0.56,ytop-14*ystep,0.08,0.04])
+resetax = pl.axes([0.56,ytop-16*ystep,0.08,0.04])
 resbutton = Button(resetax,'Reset',color=axcolor,hovercolor='0.975')
 def reset(event):
       slzL.reset(); slzS.reset()
@@ -127,11 +135,12 @@ def reset(event):
       slss.reset(); slsa.reset()
       slxs.reset(); slys.reset()
       slFs.reset(); slws.reset()
+      slns.reset(); slars.reset(); slPAs.reset()
 resbutton.on_clicked(reset)
 
 #spt0346ax = pl.axes([0.56,ytop-15*ystep,0.08,0.04])
 #s0346button = Button(spt0346ax,'SPT0346-52',color=axcolor,hovercolor='0.975')
-
+"""
 sptsources = {
       'SPT0346-52':{'zL':0.8,'zS':5.6556,'xL':0.,'yL':0.,'ML':np.log10(3.73e11),'eL':0.55,'PAL':83.5,
                     'ss':0.,'sa':0.,'xS':0.245,'yS':0.285,'FS':0.023,'ws':0.085}}
@@ -145,6 +154,6 @@ def switchsource(sd):
       slFs.set_val(sd['FS']); slws.set_val(sd['ws'])
 
 #s0346button.on_clicked(switchsource(sptsources['SPT0346-52']))
-
+"""
 
 pl.show()

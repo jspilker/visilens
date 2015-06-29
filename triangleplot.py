@@ -71,8 +71,8 @@ def TrianglePlot_MCMC(mcmcresult,plotmag=True,plotnuisance=False):
 
                   # To counter outlying walkers stuck in regions of low likelihood, we use percentiles
                   # instead of std().
-                  xstd = np.ediff1d(np.percentile(x,[15.87,84.13]))[0]
-                  ystd = np.ediff1d(np.percentile(y,[15.87,84.13]))[0]
+                  xstd = np.ediff1d(np.percentile(x,[15.87,84.13]))[0]/2.
+                  ystd = np.ediff1d(np.percentile(y,[15.87,84.13]))[0]/2.
                   xmin,xmax = np.median(x)-4*xstd, np.median(x)+4*xstd
                   ymin,ymax = np.median(y)-4*ystd, np.median(y)+4*ystd
                   

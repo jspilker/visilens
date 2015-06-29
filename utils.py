@@ -7,7 +7,7 @@ from Data_objs import Visdata
 arcsec2rad = np.pi/180/3600.
 
 __all__ = ['read_visdata','read_image','cart2pol','pol2cart','concatvis','bin_visibilities',\
-            'expsinc','box']
+            'expsinc','box','sersic_area']
 
 def read_visdata(filename):
       """
@@ -241,5 +241,29 @@ def expsinc(u,v,deltau,deltav):
 
       return np.sinc(u/(alpha1*deltau))*np.exp(-(u/(alpha2*deltau))**2.) * \
              np.sinc(v/(alpha1*deltav))*np.exp(-(v/(alpha2*deltav))**2.)
+
+def sersic_area(n,majaxis,axisratio):
+      """
+      Calculate the total area (to R=infinity) of a Sersic profile.
+      Uses the Ciotti+Bertin 1999 approx to b_n.
+
+      :param n
+            Sersic profile index. C&B1999 approx is good down to n~0.2
+
+      :param majaxis
+            Major axis of the profile, arbitrary units.
+
+      :param axisratio
+            Ratio of minor/major axis. If >1, we use 1/axisratio instead.
+
+      This method returns:
+
+      * ``sersicarea'' - The profile area, in square-majaxis units.
+      """
+      from scipy.special import gamma
+      # C&B1999 eq 18
+      bn = 2*n - 1./3. + 4./(405.*n) + 46./(25515*n**2) + 131./(1148175*n**3) - 2194697./(30690717750*n**4)
+      # Graham&Driver 2005, eq 2. Note: exp(bn) term is due to using r_half [==r_eff] instead of r/r0, cf C&B1999 eq 4
+      return 2*np.pi*n*majaxis**2 * axisratio * np.exp(bn) * gamma(2*n) / bn**(2*n)
 
 
