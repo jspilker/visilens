@@ -80,9 +80,9 @@ class SersicSource(object):
             if not isinstance(flux,dict):
                   flux = {'value':flux,'fixed':False,'prior':[1e-5,1.]} # 0.01 to 1Jy source
             if not isinstance(reff,dict):
-                  alpha = {'value':reff,'fixed':False,'prior':[0.,2.]} # arcsec
+                  reff = {'value':reff,'fixed':False,'prior':[0.,2.]} # arcsec
             if not isinstance(index,dict):
-                  index = {'value':index,'fixed':False,'prior':[1/3.,10]}
+                  index = {'value':index,'fixed':False,'prior':[0.3,4.]}
             if not isinstance(axisratio,dict):
                   axisratio = {'value':axisratio,'fixed':False,'prior':[0.01,1.]}
             if not isinstance(PA,dict):
