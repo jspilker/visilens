@@ -204,20 +204,24 @@ def CausticsSIE(SIELens,Dd,Ds,Dds,Shear=None):
 
             else:
                   # Calculate the radial caustic coordinates
-                  xr = (-b*np.sqrt(f)/fprime)*np.arcsinh(np.cos(phi)*fprime/f) + SIELens.y['value']
-                  yr = (b*np.sqrt(f)/fprime)*np.arcsin(np.sin(phi)*fprime) - SIELens.x['value']
+                  xr = (b*np.sqrt(f)/fprime)*np.arcsinh(np.cos(phi)*fprime/f)
+                  yr = (-b*np.sqrt(f)/fprime)*np.arcsin(np.sin(phi)*fprime)
                   
-                  # Now rotate the caustic to match the PA of the lens
+                  # Now rotate & shift the caustic to match the PA & loc of the lens
                   r,th = cart2pol(xr,yr)
                   xr,yr = pol2cart(r,th+SIELens.PA['value']*deg2rad)
+                  xr += SIELens.x['value']
+                  yr += SIELens.y['value']
 
                   # Calculate the tangential caustic coordinates
-                  xt = b*(((np.sqrt(f)/Delta) * np.cos(phi)) - ((np.sqrt(f)/fprime)*np.arcsinh(fprime/f * np.cos(phi)))) + SIELens.y['value']
-                  yt = -b*(((np.sqrt(f)/Delta) * np.sin(phi)) - ((np.sqrt(f)/fprime)*np.arcsin(fprime * np.sin(phi)))) - SIELens.x['value']
+                  xt = b*(((np.sqrt(f)/Delta) * np.cos(phi)) - ((np.sqrt(f)/fprime)*np.arcsinh(fprime/f * np.cos(phi))))
+                  yt = -b*(((np.sqrt(f)/Delta) * np.sin(phi)) - ((np.sqrt(f)/fprime)*np.arcsin(fprime * np.sin(phi))))
 
                   # ... and rotate it to match the lens
                   r,th = cart2pol(xt,yt)
                   xt,yt = pol2cart(r,th+SIELens.PA['value']*deg2rad)
+                  xt += SIELens.x['value']
+                  yt += SIELens.y['value']
 
                   return np.atleast_3d([[xr,yr],[xt,yt]])
 
@@ -230,11 +234,13 @@ def CausticsSIE(SIELens,Dd,Ds,Dds,Shear=None):
                   xr = -b*np.cos(phi) + SIELens.y['value']
                   yr = b*np.sin(phi) - SIELens.x['value']
 
-                  xt = (np.cos(phi) + s*np.cos(phi-2*sa))*rcrit + xr
-                  yt = (np.sin(-phi) - s*np.sin(-phi+2*sa))*rcrit + yr
+                  xt = (np.cos(phi) + s*np.cos(phi-2*sa))*rcrit + xr - SIELens.y['value']
+                  yt = (np.sin(-phi) - s*np.sin(-phi+2*sa))*rcrit + yr + SIELens.x['value']
 
                   r,th = cart2pol(yt,xt)
                   xt,yt = pol2cart(r,th+SIELens.PA['value']*deg2rad)
+                  xt += SIELens.x['value']
+                  yt += SIELens.y['value']
                   
                   r,th = cart2pol(xr,yr)
                   xr,yr = pol2cart(r,th+SIELens.PA['value']*deg2rad)
@@ -245,16 +251,20 @@ def CausticsSIE(SIELens,Dd,Ds,Dds,Shear=None):
                   rcrit = np.sqrt(2.*f)*b*(1.+s*np.cos(2.*(phi-sa))) / ((1.-s**2.)*np.sqrt((1+f**2.) - (1-f**2.)*np.cos(2*phi)))
 
                   xi = np.sqrt((2*(1-f**2.)) / ((1+f**2.)-(1-f**2.)*np.cos(2*phi)))
-                  xr = -(b*np.sqrt(f)/fprime)*np.arctanh(xi*np.sin(phi)) + SIELens.y['value']
-                  yr = (b*np.sqrt(f)/fprime)*np.arctan(xi*np.cos(phi)) - SIELens.x['value']
+                  xr = -(b*np.sqrt(f)/fprime)*np.arctanh(xi*np.sin(phi))
+                  yr = (b*np.sqrt(f)/fprime)*np.arctan(xi*np.cos(phi))
 
                   xt = (np.sin(phi)-s*np.sin(phi-2*sa))*rcrit + xr
-                  yt = (np.cos(np.pi-phi)+s*np.cos(np.pi-phi+2*sa))*rcrit + yr                  
+                  yt = (np.cos(np.pi-phi)+s*np.cos(np.pi-phi+2*sa))*rcrit + yr       
 
                   r,th = cart2pol(xt,yt)
                   xt,yt = pol2cart(r,th+SIELens.PA['value']*deg2rad)
+                  xt += SIELens.x['value']
+                  yt += SIELens.y['value']
 
                   r,th = cart2pol(xr,yr)
                   xr,yr = pol2cart(r,th+SIELens.PA['value']*deg2rad)
+                  xr += SIELens.x['value']
+                  yr += SIELens.y['value']
 
                   return np.atleast_3d([[xr,yr],[xt,yt]])
