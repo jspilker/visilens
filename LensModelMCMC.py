@@ -198,7 +198,9 @@ def LensModelMCMC(data,lens,source,shear=None,
       p0 = np.array(p0)
       # Create a ball of starting points for the walkers, gaussian ball of 
       # 10% width; if initial value is 0 (eg, astrometric shift), give a small sigma
-      initials = emcee.utils.sample_ball(p0,np.asarray([0.1*x if x else 0.05 for x in p0]),int(nwalkers))
+      # for angles, generally need more spread than 10% to sample well, do 30% for those cases [~0.5% >180deg for p0=100deg]
+      isangle = np.array([0.30 if 'PA' in s or 'angle' in s else 0.1 for s in colnames])
+      initials = emcee.utils.sample_ball(p0,np.asarray([isangle[i]*x if x else 0.05 for i,x in enumerate(p0)]),int(nwalkers))
 
       # Create the sampler object; uses calc_likelihood function defined elsewhere
       lenssampler = emcee.EnsembleSampler(nwalkers,ndim,calc_vis_lnlike,
