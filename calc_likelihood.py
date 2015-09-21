@@ -13,7 +13,7 @@ from modelcal import model_cal
 arcsec2rad = np.pi/180/3600
 
 __all__ = ['calc_vis_lnlike','calc_im_lnlike_galfit','pass_priors',
-            'create_modelimage','fft_interpolate']
+            'create_modelimage','fft_interpolate','logp','logl']
 
 
 def calc_vis_lnlike(p,data,lens,source,shear,
@@ -390,4 +390,8 @@ def fft_interpolate(visdata,immap,xmap,ymap,ug=None,scaleamp=1.,shiftphase=[0.,0
 
       return interpdata
 
+
+def logp(p): return 0.0 # flat prior, this is handled in calc_likelihood
+
+def logl(p,**kwargs): return calc_vis_lnlike(p,**kwargs)[0] # PT sampler can't deal with blobs
 
