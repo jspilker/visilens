@@ -4,10 +4,16 @@ from scipy.special import erfinv
 from astropy.stats import sigma_clip
 import copy
 from Data_objs import Visdata
-arcsec2rad = np.pi/180/3600.
+import astropy.constants as co
+c = co.c.value # speed of light, in m/s
+G = co.G.value # gravitational constant in SI units
+Msun = co.M_sun.value # solar mass, in kg
+Mpc = 1e6*co.pc.value # 1 Mpc, in m
+arcsec2rad = (np.pi/(180.*3600.))
+rad2arcsec =3600.*180./np.pi
 
 __all__ = ['read_visdata','read_image','cart2pol','pol2cart','concatvis','bin_visibilities',\
-            'expsinc','box','sersic_area']
+            'expsinc','box','sersic_area','thetaE']
 
 def read_visdata(filename):
       """
@@ -267,3 +273,21 @@ def sersic_area(n,majaxis,axisratio):
       return 2*np.pi*n*majaxis**2 * axisratio * np.exp(bn) * gamma(2*n) / bn**(2*n)
 
 
+def thetaE(ML,zL,zS,cosmo=None):
+      """
+      Calculate the Einstein radius in arcsec of a lens of mass ML,
+      assuming redshifts zL and zS. If cosmo is None, WMAP9
+      is assumed.
+      """
+      
+      if cosmo is None:
+            from astropy.cosmology import WMAP9
+            cosmo = WMAP9
+      
+      Dd = WMAP9.angular_diameter_distance(zL).value # in Mpc
+      Ds = WMAP9.angular_diameter_distance(zS).value
+      Dds= WMAP9.angular_diameter_distance_z1z2(zL,zS).value
+      
+      thE = np.sqrt((4*G*ML*Msun*Dds) / (c**2 * Dd*Ds*Mpc)) * rad2arcsec
+      
+      return thE

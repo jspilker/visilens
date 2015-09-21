@@ -73,8 +73,8 @@ def TrianglePlot_MCMC(mcmcresult,plotmag=True,plotnuisance=False):
                   # instead of std().
                   xstd = np.ediff1d(np.percentile(x,[15.87,84.13]))[0]/2.
                   ystd = np.ediff1d(np.percentile(y,[15.87,84.13]))[0]/2.
-                  xmin,xmax = np.median(x)-4*xstd, np.median(x)+4*xstd
-                  ymin,ymax = np.median(y)-4*ystd, np.median(y)+4*ystd
+                  xmin,xmax = np.median(x)-8*xstd, np.median(x)+8*xstd
+                  ymin,ymax = np.median(y)-8*ystd, np.median(y)+8*ystd
                   
                   if row > col:
                         try: marginalize_2d(x,y,axarr[row,col],\
