@@ -64,7 +64,7 @@ def plot_images(data,mcmcresult,returnimages=False,plotcombined=False,plotall=Fa
 
       # shorthand for later
       c = copy.deepcopy(mcmcresult['chains'])
-
+      """
       # Set up to create the model image. We'll assume the best-fit values are all the medians.
       lens,source = copy.deepcopy(mcmcresult['lens_p0']), copy.deepcopy(mcmcresult['source_p0'])
       for i,ilens in enumerate(lens):
@@ -113,7 +113,17 @@ def plot_images(data,mcmcresult,returnimages=False,plotcombined=False,plotall=Fa
 
       sourcedatamap = mcmcresult['sourcedatamap'] if 'sourcedatamap' in mcmcresult.keys() else None
       modelcal = mcmcresult['modelcal'] if 'modelcal' in mcmcresult.keys() else [False]*len(datasets)
+      """
 
+      # Now all these things are saved separately, don't have to do the BS above
+      lens = mcmcresult['best-fit']['lens']
+      source=mcmcresult['best-fit']['source']
+      shear =mcmcresult['best-fit']['shear'] if 'shear' in mcmcresult['best-fit'].keys() else None
+      scaleamp = mcmcresult['best-fit']['scaleamp'] if 'scaleamp' in mcmcresult['best-fit'].keys() else np.ones(len(datasets))
+      shiftphase=mcmcresult['best-fit']['shiftphase'] if 'shiftphase' in mcmcresult['best-fit'].keys() else np.zeros((len(datasets),2))
+      sourcedatamap = mcmcresult['sourcedatamap'] if 'sourcedatamap' in mcmcresult.keys() else None
+      modelcal = mcmcresult['modelcal'] if 'modelcal' in mcmcresult.keys() else [False]*len(datasets)
+      
       
       if plotall:
             f,axarr = pl.subplots(len(datasets)+1,4,figsize=(14,4*(len(datasets)+1)))
