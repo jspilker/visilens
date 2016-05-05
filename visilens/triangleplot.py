@@ -1,6 +1,5 @@
-import matplotlib.pyplot as pl
+import matplotlib.pyplot as pl; pl.ioff()
 import matplotlib.cm as cm
-from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.ticker import MaxNLocator
 import scipy.ndimage
 import numpy as np

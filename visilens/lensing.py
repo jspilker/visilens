@@ -1,18 +1,23 @@
 import numpy as np
-from utils import cart2pol,pol2cart
+import scipy.sparse
+import copy
+from class_utils import *
+from utils import *
+from astropy.cosmology import WMAP9
 import astropy.constants as co
+
 c = co.c.value # speed of light, in m/s
 G = co.G.value # gravitational constant in SI units
 Msun = co.M_sun.value # solar mass, in kg
 Mpc = 1e6*co.pc.value # 1 Mpc, in m
-arcsec2rad = (np.pi/(180.*3600.))
+arcsec2rad = np.pi/(180.*3600.)
 rad2arcsec =3600.*180./np.pi
 deg2rad = np.pi/180.
 rad2deg = 180./np.pi
 
-__all__ = ['LensRayTrace','RayTraceSIE','TraceExternalShear','CausticsSIE']
+__all__ = ['LensRayTrace','GenerateLensingGrid','thetaE','CausticsSIE']
 
-def LensRayTrace(xim,yim,lens,Dd,Ds,Dds,shear=None):
+def LensRayTrace(xim,yim,lens,Dd,Ds,Dds):
       """
       Wrapper to pass off lensing calculations to any number of functions
       defined below, accumulating lensing offsets from multiple lenses
@@ -25,136 +30,110 @@ def LensRayTrace(xim,yim,lens,Dd,Ds,Dds,shear=None):
       yimage = yim.copy()
       
       for i,ilens in enumerate(lens):
-            if ilens.__class__.__name__ == 'SIELens':
-                  dxt,dyt = xim.copy(),yim.copy()
-                  dxt,dyt = RayTraceSIE(dxt,dyt,ilens,Dd,Ds,Dds)
-                  ximage += dxt; yimage += dyt
-                  
-            else: raise ValueError("Only SIE Lenses supported for now...")
-      
-      if shear is not None:
-            dxt,dyt = xim.copy(),yim.copy()
-            dxt,dyt = TraceExternalShear(dxt,dyt,lens[0],shear)
-            ximage += dxt; yimage += dyt
+            if ilens.__class__.__name__ == 'SIELens': ilens.deflect(xim,yim,Dd,Ds,Dds)
+            elif ilens.__class__.__name__ == 'ExternalShear': ilens.deflect(xim,yim,lens[0])
+            ximage += ilens.deflected_x; yimage += ilens.deflected_y
       
       return ximage,yimage
 
-def RayTraceSIE(xim,yim,SIELens,Dd,Ds,Dds):
+def GenerateLensingGrid(data=None,xmax=None,emissionbox=[-5,5,-5,5],fieldres=None,emitres=None):
       """
-      Routine to transform image-plane coordinates to source-plane coordinates
-      for an SIE lens.
+      Routine to generate two grids for lensing. The first will be a lower-resolution
+      grid with resolution determined by fieldres and size determined
+      by xmax. The second is a much higher resolution grid which will be used for
+      the lensing itself, with resolution determined by emitres and size
+      determined from emissionbox - i.e., emissionbox should contain the coordinates
+      which conservatively encompass the real emission, so we only have to lens that part
+      of the field at high resolution.
+
+      Since we're going to be FFT'ing with these coordinates, the resolution isn't
+      directly set-able. For the low-res full-field map, it instead is set to the next-higher
+      power of 2 from what would be expected from having ~4 resolution elements across
+      the synthesized beam.
 
       Inputs:
-      ximage,yimage:
-            2D arrays defining a grid of coordinates to map, in arcsec. These should
-            be relative to the field center, i.e., we'll use the lens locations to
-            recenter this grid on the lens and then shift back to the coordinate system
-            given.
-
-      SIELens:
-            An SIELens object, containing mass, offset, etc. properties.
-      
-      Dd,Ds,Dds:
-            Angular diameter distances (in Mpc) to the lens, source, and lens-source, 
-            respectively. These could be calculated by passing a Lens and Source object,
-            but since redshift is fixed, we can just calculate the distances once
-            elsewhere and use those values repeatedly.
+      data:
+            A Visdata object, used to determine the resolutions of 
+            the two grids (based on the image size or maximum uvdistance in the dataset)
+      xmax:
+            Field size for the low-resolution grid in arcsec, which will extend from
+            (-xmax,-xmax) to (+xmax,+xmax), e.g. (-30,-30) to (+30,+30)arcsec. Should be
+            at least a bit bigger than the primary beam. Not needed for images.
+      emissionbox:
+            A 1x4 list of [xmin,xmax,ymin,ymax] defining a box (in arcsec) which contains
+            the source emission.  Coordinates should be given in arcsec relative to the
+            pointing/image center.
+      fieldres,emitres:
+            Resolutions of the coarse, full-field and fine (lensed) field, in arcsec.
+            If not given, suitable values will be calculated from the visibilities.
+            fieldres is unnecessary for images.
 
       Returns:
-      xsource,ysource:
-            Source-plane coordinates for the grid points given in ximage, yimage, in arcsec.
+      If there are any Visdata objects in the datasets, returns:
+      xmapfield,ymapfield:
+            2xN matrices containing x and y coordinates for the full-field, lower-resolution
+            grid, in arcsec.
+      xmapemission,ymapemission:
+            2xN matrices containing x and y coordinates for the smaller, very high resolution
+            grid, in arcsec.
+      indices:
+            A [4x1] array containing the indices of xmapfield,ymapfield which overlap with
+            the high resolution grid.
+      """
+
+      # Factors higher-resolution than (1/2*max(uvdist)) to make the field and emission grids
+      Nover_field = 4.
+      Nover_emission = 8.
+
+      # Allow multiple visdata objects to be passed, pick the highest resolution point of all
+      uvmax = 0.
+      try:
+            for vis in data:
+                  uvmax = max(uvmax,vis.uvdist.max())
+      except TypeError:
+            uvmax = data.uvdist.max()
+
+      # Calculate resolutions of the grids
+      if fieldres is None: fieldres = (2*Nover_field*uvmax)**-1.
+      else: fieldres *= arcsec2rad
+      if emitres is None: emitres  = (2*Nover_emission*uvmax)**-1.
+      else: emitres *= arcsec2rad
+
+      # Calculate the field grid size as a power of 2.
+      Nfield = 2**np.ceil(np.log2(2*np.abs(xmax)*arcsec2rad/fieldres))
+
+      # Calculate the grid coordinates for the larger field.
+      fieldcoords = np.linspace(-np.abs(xmax),np.abs(xmax),Nfield)
+      xmapfield,ymapfield = np.meshgrid(fieldcoords,fieldcoords)
+
+      # Calculate the indices where the high-resolution lensing grid meets the larger field grid
+      indices = np.round(np.interp(np.asarray(emissionbox),fieldcoords,np.arange(Nfield)))
+
+      # Calculate the grid coordinates for the high-res lensing grid; grids meet at indices. Some pixel-shifting reqd.
+      Nemx = 1 + np.abs(indices[1]-indices[0])*np.ceil((fieldcoords[1]-fieldcoords[0])/(2*emitres*rad2arcsec))
+      Nemy = 1 + np.abs(indices[3]-indices[2])*np.ceil((fieldcoords[1]-fieldcoords[0])/(2*emitres*rad2arcsec))
+      xemcoords = np.linspace(fieldcoords[indices[0]],fieldcoords[indices[1]],Nemx)
+      yemcoords = np.linspace(fieldcoords[indices[2]],fieldcoords[indices[3]],Nemy)
+      xmapemission,ymapemission = np.meshgrid(xemcoords,yemcoords)
+      xmapemission -= (xmapemission[0,1]-xmapemission[0,0])
+      ymapemission -= abs((ymapemission[1,0]-ymapemission[0,0]))
+
+      return xmapfield,ymapfield,xmapemission,ymapemission,indices
+      
+def thetaE(ML,zL,zS,cosmo=WMAP9):
+      """
+      Calculate the Einstein radius in arcsec of a lens of mass ML,
+      assuming redshifts zL and zS. If cosmo is None, WMAP9
+      is assumed. ML is in solar masses.
       """
       
-      ximage,yimage = xim.copy(), yim.copy()
-
-      # Following Kormann+ 1994 for the lensing. Easier to work with axis ratio than ellipticity
-      f = 1. - SIELens.e['value']
-      fprime = np.sqrt(1. - f**2.)
-
-      # K+94 parameterize lens in terms of LOS velocity dispersion; calculate here in m/s
-      sigma_lens = ((SIELens.M['value']*Ds*G*Msun*c**2.)/(4.*np.pi**2. * Dd*Dds*Mpc))**(1./4.)
-
-      # K+94, eq 15., units of Mpc; a polar coordinate radius normalization
-      Xi0 = 4 * np.pi * (sigma_lens/c)**2. * (Dd*Dds/Ds)
-
-      ximage *= arcsec2rad
-      yimage *= arcsec2rad
-
-      # Recenter grid on the lens
-      ximage -= SIELens.x['value']*arcsec2rad
-      yimage -= SIELens.y['value']*arcsec2rad
-
-      # Rotate the coordinate system to align with the lens major axis
-      if not np.isclose(SIELens.PA['value'], 0.):
-            r,theta = cart2pol(ximage,yimage)
-            ximage,yimage = pol2cart(r,theta-(SIELens.PA['value']*deg2rad))
-
-      # Polar coordinate angle from lens centroid
-      phi = np.arctan2(yimage,ximage)
-
-      # Calculate the transformation of the convergence term; K+94 eq 27a
-      # Need to account for case of ellipticity=0 (the SIS), which has canceling infinities
-      if np.isclose(f,1.):
-            dxs =  - (Xi0/Dd)*np.cos(phi)
-            dys =  - (Xi0/Dd)*np.sin(phi)
-      else:
-            dxs = - (Xi0/Dd)*(np.sqrt(f)/fprime)*np.arcsinh(np.cos(phi)*fprime/f)
-            dys = - (Xi0/Dd)*(np.sqrt(f)/fprime)*np.arcsin(np.sin(phi)*fprime)
-
-      # Rotate and shift the coordinate system back to the sky frame
-      if not np.isclose(SIELens.PA['value'],0.):
-            r,theta = cart2pol(dxs,dys)
-            dxs,dys = pol2cart(r,theta+(SIELens.PA['value']*deg2rad))
-
-      dxs *= rad2arcsec
-      dys *= rad2arcsec
+      Dd = cosmo.angular_diameter_distance(zL).value # in Mpc
+      Ds = cosmo.angular_diameter_distance(zS).value
+      Dds= cosmo.angular_diameter_distance_z1z2(zL,zS).value
       
-      #print dxs,dys
-
-      return dxs,dys
+      thE = np.sqrt((4*G*ML*Msun*Dds) / (c**2 * Dd*Ds*Mpc)) * rad2arcsec
       
-def TraceExternalShear(xim,yim,lens,shear):
-      """
-      Calculate deflections due to an external shear component.
-      
-      Inputs:
-      xim,yim:
-            Map coordinates to perform the shear on.
-            
-      lens:
-            A lens object; we use this to shift the coordinate system
-            to be centered on the lens. This should be a single lens,
-            not a list, since external shear isn't really meant to be
-            applied if there are multiple lenses anyway.
-            
-      shear:
-            An ExternalShear object, which gives the strength and angle of
-            the deflection. The angle is defined in degrees N of E.
-            
-      Returns:
-      xsource,ysource:
-            Deflections calculated for the given inputs.
-      """
-      
-      ximage,yimage = xim.copy(),yim.copy()
-      
-      ximage -= lens.x['value']
-      yimage -= lens.y['value']
-      
-      if not np.isclose(lens.PA['value'], 0.):
-            r,theta = cart2pol(ximage,yimage)
-            ximage,yimage = pol2cart(r,theta-(lens.PA['value']*deg2rad))
-      
-      # Calculate contribution from shear term; see Keeton,Mao&Witt2000, altered for this coord convention
-      gamma,thg = shear.shear['value'],(shear.shearangle['value']-lens.PA['value'])*deg2rad
-      dxs = -gamma*np.cos(2*thg)*ximage - gamma*np.sin(2*thg)*yimage
-      dys = -gamma*np.sin(2*thg)*ximage + gamma*np.cos(2*thg)*yimage
-
-      if not np.isclose(lens.PA['value'],0.):
-            r,theta = cart2pol(dxs,dys)
-            dxs,dys = pol2cart(r,theta+(lens.PA['value']*deg2rad))
-      
-      return dxs,dys
+      return thE
 
 def CausticsSIE(SIELens,Dd,Ds,Dds,Shear=None):
       """

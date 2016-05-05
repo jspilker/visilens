@@ -1,11 +1,10 @@
 import numpy as np
-from RayTracePixels import *
-from Model_objs import *
-from SourceProfile import *
-import matplotlib.pyplot as pl
+import sys; sys.path.append('..')
+import visilens as vl
 from matplotlib.widgets import Slider,Button
 from astropy.cosmology import WMAP9 as cosmo
-
+import matplotlib.pyplot as pl
+pl.ioff()
 
 xim = np.arange(-3,3,.03)
 yim = np.arange(-3,3,.03)
@@ -17,27 +16,24 @@ xLens,yLens = 0.,0.
 MLens,eLens,PALens = 2.87e11,0.5,90.
 xSource,ySource,FSource,sSource = 0.216,-0.24,0.023,0.074
 
-Lens = SIELens(zLens,xLens,yLens,MLens,eLens,PALens)
-Source = GaussSource(zSource,True,xSource,ySource,FSource,sSource)
-Shear = ExternalShear(0.,0.)
+Lens = vl.SIELens(zLens,xLens,yLens,MLens,eLens,PALens)
+Shear= vl.ExternalShear(0.,0.)
+lens = [Lens,Shear]
+Source = vl.GaussSource(zSource,True,xSource,ySource,FSource,sSource)
 Dd = cosmo.angular_diameter_distance(zLens).value
 Ds = cosmo.angular_diameter_distance(zSource).value
 Dds = cosmo.angular_diameter_distance_z1z2(zLens,zSource).value
-caustics = CausticsSIE(Lens,Dd,Ds,Dds,Shear)
+caustics = vl.CausticsSIE(Lens,Dd,Ds,Dds,Shear)
 
-xsource,ysource = LensRayTrace(xim,yim,Lens,Dd,Ds,Dds,shear=Shear)
+xsource,ysource = vl.LensRayTrace(xim,yim,lens,Dd,Ds,Dds)
 
 f = pl.figure()
 ax = f.add_subplot(111,aspect='equal')
 pl.subplots_adjust(bottom=0.25,top=0.98)
 
-#ax.plot(xim,yim,'g-')
 ax.plot(xsource,ysource,'b-')
 for i in range(caustics.shape[0]):
       ax.plot(caustics[i,0,:],caustics[i,1,:],'k-')
-
-#ax.set_xlim(-0.5,0.5)
-#ax.set_ylim(-0.5,0.5)
 
 # Put in a bunch of sliders to control lensing parameters
 
@@ -71,10 +67,10 @@ def update(val):
       newDd = cosmo.angular_diameter_distance(zL).value
       newDs = cosmo.angular_diameter_distance(zS).value
       newDds= cosmo.angular_diameter_distance_z1z2(zL,zS).value
-      newLens = SIELens(zLens,xL,yL,10**ML,eL,PAL)
-      newShear = ExternalShear(sh,sha)
-      xsource,ysource = LensRayTrace(xim,yim,newLens,newDd,newDs,newDds,newShear)
-      caustics = CausticsSIE(newLens,Dd,Ds,Dds,newShear)
+      newLens = vl.SIELens(zLens,xL,yL,10**ML,eL,PAL)
+      newShear = vl.ExternalShear(sh,sha)
+      xsource,ysource = vl.LensRayTrace(xim,yim,[newLens,newShear],newDd,newDs,newDds)
+      caustics = vl.CausticsSIE(newLens,newDd,newDs,newDds,newShear)
       ax.cla()
       ax.plot(xsource,ysource,'b-')
       for i in range(caustics.shape[0]):

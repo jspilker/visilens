@@ -1,19 +1,21 @@
 import numpy as np
 import scipy.sparse
-import scipy.sparse.linalg
 import os
 import sys
 import emcee
 import copy
-from Model_objs import *
-from GenerateLensingGrid import GenerateLensingGrid
+from astropy.cosmology import WMAP9
+from class_utils import *
+from lensing import *
+from utils import *
 from calc_likelihood import calc_vis_lnlike
+
 arcsec2rad = np.pi/180/3600
 
-def LensModelMCMC(data,lens,source,shear=None,
+def LensModelMCMC(data,lens,source,
                   xmax=30.,highresbox=[-3.,3.,3.,-3.],emitres=None,fieldres=None,
                   sourcedatamap=None, scaleamp=False, shiftphase=False,
-                  modelcal=True,cosmo=None,
+                  modelcal=True,cosmo=WMAP9,
                   nwalkers=1e3,nburn=1e3,nstep=1e3,pool=None,nthreads=1,mpirun=False):
       """
       Wrapper function which basically takes what the user wants and turns it into the
@@ -24,12 +26,10 @@ def LensModelMCMC(data,lens,source,shear=None,
             One or more visdata objects; if multiple datasets are being
             fit to, should be a list of visdata objects.
       lens:
-            Any of the currently implemented lens objects.
+            Any of the currently implemented lens objects or ExternalShear.
       source:
             One or more of the currently implemented source objects; if more than
             one source to be fit, should be a list of multiple sources.
-      shear:
-            An ExternalShear object, or None (default) if no external shear desired
       xmax:
             (Half-)Grid size, in arcseconds; the grid will span +/-xmax in x&y
       highresbox:
@@ -119,6 +119,12 @@ def LensModelMCMC(data,lens,source,shear=None,
                               ndim += 1
                               p0.append(vars(ilens)[key]['value'])
                               colnames.append(key+'L'+str(i))
+            elif ilens.__class__.__name__=='ExternalShear':
+                  for key in ['shear','shearangle']:
+                        if not vars(ilens)[key]['fixed']:
+                              ndim += 1
+                              p0.append(vars(ilens)[key]['value'])
+                              colnames.append(key)
       # Then source(s)
       for i,src in enumerate(source):
             if src.__class__.__name__=='GaussSource':
@@ -139,13 +145,6 @@ def LensModelMCMC(data,lens,source,shear=None,
                               ndim += 1
                               p0.append(vars(src)[key]['value'])
                               colnames.append(key+'S'+str(i))
-      # Then shear
-      if shear is not None:
-            for key in ['shear','shearangle']:
-                  if not vars(shear)[key]['fixed']:
-                        ndim += 1
-                        p0.append(vars(shear)[key]['value'])
-                        colnames.append(key)
       # Then flux rescaling; only matters if >1 dataset
       for i,t in enumerate(scaleamp[1:]):
             if t:
@@ -163,7 +162,7 @@ def LensModelMCMC(data,lens,source,shear=None,
       # Get any model-cal parameters set up. The process involves some expensive
       # matrix inversions, but these only need to be done once, so we'll do them
       # now and pass the results as arguments to the likelihood function. See docs
-      # in modelcal.py for more info.
+      # in calc_likelihood.model_cal for more info.
       for i,dset in enumerate(data):
             if modelcal[i]:
                   uniqant = np.unique(np.asarray([dset.ant1,dset.ant2]).flatten())
@@ -190,7 +189,7 @@ def LensModelMCMC(data,lens,source,shear=None,
       # Calculate some distances; we only need to calculate these once.
       # This assumes multiple sources are all at same z; should be this
       # way anyway or else we'd have to deal with multiple lensing planes
-      if cosmo is None: from astropy.cosmology import WMAP9 as cosmo
+      if cosmo is None: cosmo = WMAP9
       Dd = cosmo.angular_diameter_distance(lens[0].z).value
       Ds = cosmo.angular_diameter_distance(source[0].z).value
       Dds= cosmo.angular_diameter_distance_z1z2(lens[0].z,source[0].z).value
@@ -202,21 +201,27 @@ def LensModelMCMC(data,lens,source,shear=None,
       isangle = np.array([0.30 if 'PA' in s or 'angle' in s else 0.1 for s in colnames])
       initials = emcee.utils.sample_ball(p0,np.asarray([isangle[i]*x if x else 0.05 for i,x in enumerate(p0)]),int(nwalkers))
 
+      # All the lens objects know if their parameters have been altered since the last time
+      # we calculated the deflections. If all the lens pars are fixed, we only need to do the
+      # deflections once. This step ensures that the lens object we create the sampler with
+      # has these initial deflections.
+      for i,ilens in enumerate(lens):
+            if ilens.__class__.__name__ == 'SIELens': ilens.deflect(xemit,yemit,Dd,Ds,Dds)
+            elif ilens.__class__.__name__ == 'ExternalShear': ilens.deflect(xemit,yemit,lens[0])
+
       # Create the sampler object; uses calc_likelihood function defined elsewhere
       lenssampler = emcee.EnsembleSampler(nwalkers,ndim,calc_vis_lnlike,
-            args = [data,lens,source,shear,Dd,Ds,Dds,ug,
+            args = [data,lens,source,Dd,Ds,Dds,ug,
                     xmap,ymap,xemit,yemit,indices,
                     sourcedatamap,scaleamp,shiftphase,modelcal],
             threads=nthreads,pool=pool)
 
-      #return colnames,initials,lenssampler
       
       # Run burn-in phase
       print "Running burn-in... "
       #pos,prob,rstate,mus = lenssampler.run_mcmc(initials,nburn,storechain=False)
       for i,result in enumerate(lenssampler.sample(initials,iterations=nburn,storechain=False)):
-            # WTF, el gato?
-            print 'Burn-in step ',i,'/',nburn
+            if i%20==0: print 'Burn-in step ',i,'/',nburn
             pos,prob,rstate,blob = result
       
       
@@ -225,7 +230,7 @@ def LensModelMCMC(data,lens,source,shear=None,
       # Run actual chains
       print "Done. Running chains... "
       for i,result in enumerate(lenssampler.sample(pos,rstate0=rstate,iterations=nstep,storechain=True)):
-            print 'Chain step ',i,'/',nstep
+            if i%20==0: print 'Chain step ',i,'/',nstep
       
       #lenssampler.run_mcmc(pos,nstep,rstate0=rstate)
       if mpirun: pool.close()
@@ -255,7 +260,7 @@ def LensModelMCMC(data,lens,source,shear=None,
       # but it's fine. use --mca mpi_warn_on_fork 0 in the mpirun statement to disable
       try: 
             import subprocess
-            gitd = os.path.dirname(__file__)
+            gitd = os.path.abspath(os.path.join(os.path.dirname(__file__),os.pardir))
             mcmcresult['githash'] = subprocess.check_output('git --git-dir={0:s} --work-tree={1:s} '\
                   'rev-parse HEAD'.format(gitd+'/.git',gitd),shell=True).rstrip()
       except:
@@ -266,7 +271,6 @@ def LensModelMCMC(data,lens,source,shear=None,
 
       mcmcresult['lens_p0'] = lens      # Initial params for lens,src(s),shear; also tells if fixed, priors, etc.
       mcmcresult['source_p0'] = source
-      if shear: mcmcresult['shear_p0'] = shear
       
       if sourcedatamap: mcmcresult['sourcedatamap'] = sourcedatamap
       mcmcresult['xmax'] = xmax
@@ -291,6 +295,11 @@ def LensModelMCMC(data,lens,source,shear=None,
                         if not vars(ilens)[key]['fixed']:
                               ilens.__dict__[key]['value'] = np.median(c[key+'L'+str(i)])
                               pbest.append(np.median(c[key+'L'+str(i)]))
+            elif ilens.__class__.__name__ == 'ExternalShear':
+                  for key in ['shear','shearangle']:
+                        if not vars(ilens)[key]['fixed']:
+                              ilens.__dict__[key]['value'] = np.median(c[key])
+                              pbest.append(np.median(c[key]))
       
       mcmcresult['best-fit']['lens'] = lens
 
@@ -314,16 +323,6 @@ def LensModelMCMC(data,lens,source,shear=None,
 
       mcmcresult['best-fit']['source'] = source
       mcmcresult['best-fit']['magnification'] = np.median(mus[~bad],axis=0)
-
-      # now do shear, if any
-      if 'shear_p0' in mcmcresult.keys():
-            shear = mcmcresult['shear_p0']
-            for key in ['shear','shearangle']:
-                  if not vars(shear)[key]['fixed']:
-                        shear.__dict__[key]['value'] = np.median(c[key])
-                        pbest.append(np.median(c[key]))
-            mcmcresult['best-fit']['shear'] = shear
-      else: mcmcresult['best-fit']['shear'] = None
 
       # Any amplitude scaling or astrometric shifts
       bfscaleamp = np.ones(len(data))
@@ -349,7 +348,7 @@ def LensModelMCMC(data,lens,source,shear=None,
       mcmcresult['best-fit']['shiftphase'] = bfshiftphase
       
       mcmcresult['best-fit']['lnlike'] = calc_vis_lnlike(pbest,data,mcmcresult['best-fit']['lens'],
-            mcmcresult['best-fit']['source'],mcmcresult['best-fit']['shear'],
+            mcmcresult['best-fit']['source'],
             Dd,Ds,Dds,ug,xmap,ymap,xemit,yemit,indices,
             sourcedatamap,scaleamp,shiftphase,modelcal)[0]
       
@@ -368,6 +367,4 @@ def LensModelMCMC(data,lens,source,shear=None,
             else: 
                   if any(modelcal): mcmcresult['calphases_dset0'] = dphases
       
-      return mcmcresult,lenssampler.flatchain,lenssampler.blobs,colnames
-      
-      
+      return mcmcresult

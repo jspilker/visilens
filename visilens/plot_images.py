@@ -1,20 +1,80 @@
 import numpy as np
+import copy
+from scipy.fftpack import fftshift,fft2
 from scipy.ndimage.measurements import center_of_mass
-from astropy.stats import sigma_clip
-import matplotlib.pyplot as pl
+import matplotlib.pyplot as pl; pl.ioff()
 import matplotlib.cm as cm
 from matplotlib.colors import SymLogNorm
-from Model_objs import *
-from Data_objs import *
-from uvimage import uvimageslow
-from calc_likelihood import create_modelimage,fft_interpolate
-from modelcal import model_cal
-from GenerateLensingGrid import GenerateLensingGrid
+from class_utils import *
+from calc_likelihood import *
 from utils import *
-import copy
+from lensing import *
+
+arcsec2rad = np.pi/180./3600.
+c = 2.99792458e8 # in m/s
+
+__all__ = ['uvimageslow','plot_images']
+
+def uvimageslow(visdata,imsize=256,pixsize=0.5,taper=0.):
+      """
+      Invert a set of visibilities to the image plane in the slowest way possible
+      (ie, no gridding of visibilities, just straight-up summation). This gets
+      pretty darn close to imaging with CASA with natural weighting, no cleaning.
+      
+      Note: this is very slow, because it's very stupid (no gridding of visibilities
+      or anything). If you need to make large images of a lot of data, I strongly
+      recommend outputting your data to uvfits and imaging elsewhere, because I don't
+      particularly want to re-create all of CASA's :clean: functionality on my own.
+      
+      Inputs:
+      visdata:
+            Any Visdata object
+      imsize:
+            Size of the output image in pixels
+      pixsize:
+            Pixel size, in arcseconds
+      taper:
+            Apply an additional gaussian taper to the
+            visibilities with sigma of this, in arcsec.
+
+      Returns:
+      image:
+            A 2D array containing the image of the inverted visibilities
+      """
+
+      thisvis = copy.deepcopy(visdata)
+
+      if taper > 0.:
+            uvsig = (taper * arcsec2rad)**-1.
+            scalefac = np.exp(-thisvis.uvdist**2/(2*uvsig**2.))
+            thisvis.sigma /= scalefac
+
+      x = np.linspace(-imsize*pixsize/2. * arcsec2rad,+imsize*pixsize/2. * arcsec2rad,imsize)
+      x,y = np.meshgrid(x,x)
+      # These offsets line us up with CASA's coord system
+      x -= pixsize/2. * arcsec2rad
+      y += pixsize/2. * arcsec2rad
+
+      im = np.array(np.zeros(x.shape),dtype=complex)
+
+      # Check to see if we have the conjugate visibilities, and image.
+      if np.all(thisvis.u[:thisvis.u.size/2] == -thisvis.u[thisvis.u.size/2:]):
+            for i in range(thisvis.u.size/2):
+                  im += (thisvis.sigma[i]**-2)*(thisvis.real[i]+1j*thisvis.imag[i]) *\
+                        np.exp(2*np.pi*1j*((thisvis.u[i]*x)+(thisvis.v[i]*y)))
+      else:
+            for i in range(thisvis.u.size):
+                  im += (thisvis.sigma[i]**-2)*(thisvis.real[i]+1j*thisvis.imag[i]) *\
+                        np.exp(2*np.pi*1j*((thisvis.u[i]*x)+(thisvis.v[i]*y)))
+            
+      # We only imaged the non-conjugate visibilities; fix and renormalize to Jy/beam units
+      im = 2*im.real
+      im /= (2*thisvis.sigma**-2).sum()
+
+      return im
 
 def plot_images(data,mcmcresult,returnimages=False,plotcombined=False,plotall=False,
-                  imsize=512,pixsize=0.2,taper=0.,**kwargs):
+                  imsize=256,pixsize=0.2,taper=0.,**kwargs):
       """
       Create a four-panel figure from data and chains,
       showing data, best-fit model, residuals, high-res image.
@@ -64,61 +124,10 @@ def plot_images(data,mcmcresult,returnimages=False,plotcombined=False,plotall=Fa
 
       # shorthand for later
       c = copy.deepcopy(mcmcresult['chains'])
-      """
-      # Set up to create the model image. We'll assume the best-fit values are all the medians.
-      lens,source = copy.deepcopy(mcmcresult['lens_p0']), copy.deepcopy(mcmcresult['source_p0'])
-      for i,ilens in enumerate(lens):
-            if ilens.__class__.__name__ == 'SIELens':
-                  for key in ['x','y','M','e','PA']:
-                        if not vars(ilens)[key]['fixed']:
-                              ilens.__dict__[key]['value'] = np.median(c[key+'L'+str(i)])
-      # now do the source(s)
-      for i,src in enumerate(source): # Source is a list of source objects
-            if src.__class__.__name__ == 'GaussSource':
-                  for key in ['xoff','yoff','flux','width']:
-                        if not vars(src)[key]['fixed']:
-                              src.__dict__[key]['value'] = np.median(c[key+'S'+str(i)])
-            elif src.__class__.__name__ == 'SersicSource':
-                  for key in ['xoff','yoff','flux','reff','index','axisratio','PA']:
-                        if not vars(src)[key]['fixed']:
-                              src.__dict__[key]['value'] = np.median(c[key+'S'+str(i)])
-            elif src.__class__.__name__ == 'PointSource':
-                  for key in ['xoff','yoff','flux']:
-                        if not vars(src)[key]['fixed']:
-                              src.__dict__[key]['value'] = np.median(c[key+'S'+str(i)])
-      
-      # now do shear, if any
-      if 'shear_p0' in mcmcresult.keys():
-            shear = mcmcresult['shear_p0']
-            for key in ['shear','shearangle']:
-                  if not vars(shear)[key]['fixed']:
-                        shear.__dict__[key]['value'] = np.median(c[key])
-      else: shear = None 
-
-      # Any amplitude scaling or astrometric shifts
-      scaleamp = np.ones(len(datasets))
-      if 'scaleamp' in mcmcresult.keys():
-            for i,t in enumerate(mcmcresult['scaleamp']): # only matters if >1 datasets
-                  if i==0: pass
-                  elif t: scaleamp[i] = np.median(c['ampscale_dset'+str(i)])
-                  else: pass
-      shiftphase = np.zeros((len(datasets),2))
-      if 'shiftphase' in mcmcresult.keys():
-            for i,t in enumerate(mcmcresult['shiftphase']):
-                  if i==0: pass # only matters if >1 datasets
-                  elif t:
-                        shiftphase[i][0] = np.median(c['astromshift_x_dset'+str(i)])
-                        shiftphase[i][1] = np.median(c['astromshift_y_dset'+str(i)])
-                  else: pass # no shifting
-
-      sourcedatamap = mcmcresult['sourcedatamap'] if 'sourcedatamap' in mcmcresult.keys() else None
-      modelcal = mcmcresult['modelcal'] if 'modelcal' in mcmcresult.keys() else [False]*len(datasets)
-      """
 
       # Now all these things are saved separately, don't have to do the BS above
       lens = mcmcresult['best-fit']['lens']
       source=mcmcresult['best-fit']['source']
-      shear =mcmcresult['best-fit']['shear'] if 'shear' in mcmcresult['best-fit'].keys() else None
       scaleamp = mcmcresult['best-fit']['scaleamp'] if 'scaleamp' in mcmcresult['best-fit'].keys() else np.ones(len(datasets))
       shiftphase=mcmcresult['best-fit']['shiftphase'] if 'shiftphase' in mcmcresult['best-fit'].keys() else np.zeros((len(datasets),2))
       sourcedatamap = mcmcresult['sourcedatamap'] if 'sourcedatamap' in mcmcresult.keys() else None
@@ -146,7 +155,7 @@ def plot_images(data,mcmcresult,returnimages=False,plotcombined=False,plotall=Fa
                   mcmcresult['highresbox'],mcmcresult['fieldres'],mcmcresult['emitres'])
             
             # Create model image
-            immap,_ = create_modelimage(lens,source,shear,xmap,ymap,xemit,yemit,\
+            immap,_ = create_modelimage(lens,source,xmap,ymap,xemit,yemit,\
                   ix,sourcedatamap)
 
             # And interpolate onto uv-coords of dataset
@@ -210,13 +219,11 @@ def plot_images(data,mcmcresult,returnimages=False,plotcombined=False,plotall=Fa
             else: sig,unit = s,'Jy'
             axarr[row,2].text(0.1,0.1,"1$\sigma$ = {0:.1f}{1:s}".format(sig,unit),
                   transform=axarr[row,2].transAxes,bbox=dict(fc='w'))
-            #axarr[i,3].imshow(immap,interpolation='nearest',\
-            #      extent=[xmap.min(),xmap.max(),xmap.max(),xmap.min()],cmap=cmap)
 
             # Give a zoomed-in view in the last panel
             # Create model image at higher res, remove unlensed sources
             src = [src for src in source if src.lensed]
-            imemit,_ = create_modelimage(lens,src,shear,xemit,yemit,xemit,yemit,\
+            imemit,_ = create_modelimage(lens,src,xemit,yemit,xemit,yemit,\
                   [0,xemit.shape[1],0,xemit.shape[0]],sourcedatamap)
 
             images[row].append(imemit)

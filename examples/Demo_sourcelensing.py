@@ -1,37 +1,36 @@
 import numpy as np
-from RayTracePixels import *
-from Model_objs import *
-from SourceProfile import SourceProfile
-import matplotlib.pyplot as pl
+import sys; sys.path.append('..')
+import visilens as vl
+import matplotlib.pyplot as pl; pl.ioff()
 import matplotlib.cm as cm
 from matplotlib.widgets import Slider,Button
 from astropy.cosmology import WMAP9 as cosmo
 
 
-xim = np.arange(-2,2,.01)
-yim = np.arange(-2,2,.01)
+xim = np.arange(-3.,3.,.02)
+yim = np.arange(-3.,3.,.02)
 
 xim,yim = np.meshgrid(xim,yim)
 
 zLens,zSource = 0.8,5.656
 xLens,yLens = 0.,0.
-MLens,eLens,PALens = 2.87e11,0.54,180-96.4
-xSource,ySource,FSource,sSource,nSource,arSource,PAsource = 0.216,0.24,0.023,0.074,0.5,0.7,45.
-shear,shearangle = 0., 0.
+MLens,eLens,PALens = 2.87e11,0.5,70.
+xSource,ySource,FSource,sSource,nSource,arSource,PAsource = 0.216,0.24,0.02,0.1,0.8,0.7,120.-90
+shear,shearangle = 0.12, 120.
 
 
-Lens = SIELens(zLens,xLens,yLens,MLens,eLens,PALens)
-Source = SersicSource(zSource,True,xSource,ySource,FSource,sSource,nSource,arSource,PAsource)
-Shear = ExternalShear(shear,shearangle)
+Lens = vl.SIELens(zLens,xLens,yLens,MLens,eLens,PALens)
+Shear = vl.ExternalShear(shear,shearangle)
+Source = vl.SersicSource(zSource,True,xSource,ySource,FSource,sSource,nSource,arSource,PAsource)
 Dd = cosmo.angular_diameter_distance(zLens).value
 Ds = cosmo.angular_diameter_distance(zSource).value
 Dds = cosmo.angular_diameter_distance_z1z2(zLens,zSource).value
 
-xsource,ysource = LensRayTrace(xim,yim,Lens,Dd,Ds,Dds,shear=Shear)
+xsource,ysource = vl.LensRayTrace(xim,yim,[Lens,Shear],Dd,Ds,Dds)
 
-imbg = SourceProfile(xim,yim,Source,Lens)
-imlensed = SourceProfile(xsource,ysource,Source,Lens)
-caustics = CausticsSIE(Lens,Dd,Ds,Dds,Shear)
+imbg = vl.SourceProfile(xim,yim,Source,[Lens,Shear])
+imlensed = vl.SourceProfile(xsource,ysource,Source,[Lens,Shear])
+caustics = vl.CausticsSIE(Lens,Dd,Ds,Dds,Shear)
 
 f = pl.figure(figsize=(12,6))
 ax = f.add_subplot(111,aspect='equal')
@@ -47,6 +46,8 @@ cmlens._lut[0,-1] = 0.
 
 ax.imshow(imbg,cmap=cmbg,extent=[xim.min(),xim.max(),yim.min(),yim.max()],origin='lower')
 ax.imshow(imlensed,cmap=cmlens,extent=[xim.min(),xim.max(),yim.min(),yim.max()],origin='lower')
+mu = imlensed.sum()*(xim[0,1]-xim[0,0])**2 / Source.flux['value']
+ax.text(0.9,1.05,'$\\mu$ = {0:.2f}'.format(mu),transform=ax.transAxes)
 
 for i in range(caustics.shape[0]):
       ax.plot(caustics[i,0,:],caustics[i,1,:],'k-')
@@ -100,18 +101,20 @@ def update(val):
       newDd = cosmo.angular_diameter_distance(zL).value
       newDs = cosmo.angular_diameter_distance(zS).value
       newDds= cosmo.angular_diameter_distance_z1z2(zL,zS).value
-      newLens = SIELens(zLens,xL,yL,10**ML,eL,PAL)
-      newShear = ExternalShear(sh,sha)
-      newSource = SersicSource(zS,True,xs,ys,Fs,ws,ns,ars,pas)
-      xs,ys = LensRayTrace(xim,yim,newLens,newDd,newDs,newDds,newShear)
-      imbg = SourceProfile(xim,yim,newSource,newLens)
-      imlensed = SourceProfile(xs,ys,newSource,newLens)
-      caustics = CausticsSIE(newLens,Dd,Ds,Dds,newShear)
+      newLens = vl.SIELens(zLens,xL,yL,10**ML,eL,PAL)
+      newShear = vl.ExternalShear(sh,sha)
+      newSource = vl.SersicSource(zS,True,xs,ys,Fs,ws,ns,ars,pas)
+      xs,ys = vl.LensRayTrace(xim,yim,[newLens,newShear],newDd,newDs,newDds)
+      imbg = vl.SourceProfile(xim,yim,newSource,[newLens,newShear])
+      imlensed = vl.SourceProfile(xs,ys,newSource,[newLens,newShear])
+      caustics = vl.CausticsSIE(newLens,newDd,newDs,newDds,newShear)
 
       ax.cla()
 
       ax.imshow(imbg,cmap=cmbg,extent=[xim.min(),xim.max(),yim.min(),yim.max()],origin='lower')
       ax.imshow(imlensed,cmap=cmlens,extent=[xim.min(),xim.max(),yim.min(),yim.max()],origin='lower')
+      mu = imlensed.sum()*(xim[0,1]-xim[0,0])**2 / newSource.flux['value']
+      ax.text(0.9,1.05,'$\\mu$ = {0:.2f}'.format(mu),transform=ax.transAxes)
 
       for i in range(caustics.shape[0]):
             ax.plot(caustics[i,0,:],caustics[i,1,:],'k-')
@@ -137,23 +140,5 @@ def reset(event):
       slFs.reset(); slws.reset()
       slns.reset(); slars.reset(); slPAs.reset()
 resbutton.on_clicked(reset)
-
-#spt0346ax = pl.axes([0.56,ytop-15*ystep,0.08,0.04])
-#s0346button = Button(spt0346ax,'SPT0346-52',color=axcolor,hovercolor='0.975')
-"""
-sptsources = {
-      'SPT0346-52':{'zL':0.8,'zS':5.6556,'xL':0.,'yL':0.,'ML':np.log10(3.73e11),'eL':0.55,'PAL':83.5,
-                    'ss':0.,'sa':0.,'xS':0.245,'yS':0.285,'FS':0.023,'ws':0.085}}
-
-def switchsource(sd):
-      slzL.set_val(sd['zL']); slzS.set_val(sd['zS'])
-      slxL.set_val(sd['xL']); slyL.set_val(sd['yL'])
-      slML.set_val(sd['ML']); sleL.set_val(sd['eL']); slPAL.set_val(sd['PAL'])
-      slss.set_val(sd['ss']); slsa.set_val(sd['sa'])
-      slxs.set_val(sd['xS']); slys.set_val(sd['yS'])
-      slFs.set_val(sd['FS']); slws.set_val(sd['ws'])
-
-#s0346button.on_clicked(switchsource(sptsources['SPT0346-52']))
-"""
 
 pl.show()
