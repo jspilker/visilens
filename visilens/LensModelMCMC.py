@@ -291,6 +291,7 @@ def LensModelMCMC(data,lens,source,
       lens,source = copy.deepcopy(mcmcresult['lens_p0']), copy.deepcopy(mcmcresult['source_p0'])
       for i,ilens in enumerate(lens):
             if ilens.__class__.__name__ == 'SIELens':
+                  ilens.__dict__['_altered'] = True
                   for key in ['x','y','M','e','PA']:
                         if not vars(ilens)[key]['fixed']:
                               ilens.__dict__[key]['value'] = np.median(c[key+'L'+str(i)])
