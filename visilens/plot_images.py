@@ -130,7 +130,7 @@ def plot_images(data,mcmcresult,returnimages=False,plotcombined=False,plotall=Fa
       source=mcmcresult['best-fit']['source']
       scaleamp = mcmcresult['best-fit']['scaleamp'] if 'scaleamp' in mcmcresult['best-fit'].keys() else np.ones(len(datasets))
       shiftphase=mcmcresult['best-fit']['shiftphase'] if 'shiftphase' in mcmcresult['best-fit'].keys() else np.zeros((len(datasets),2))
-      sourcedatamap = mcmcresult['sourcedatamap'] if 'sourcedatamap' in mcmcresult.keys() else None
+      sourcedatamap = mcmcresult['sourcedatamap'] if 'sourcedatamap' in mcmcresult.keys() else [None]*len(datasets)
       modelcal = mcmcresult['modelcal'] if 'modelcal' in mcmcresult.keys() else [False]*len(datasets)
       
       
@@ -156,7 +156,7 @@ def plot_images(data,mcmcresult,returnimages=False,plotcombined=False,plotall=Fa
             
             # Create model image
             immap,_ = create_modelimage(lens,source,xmap,ymap,xemit,yemit,\
-                  ix,sourcedatamap)
+                  ix,sourcedatamap=sourcedatamap[i])
 
             # And interpolate onto uv-coords of dataset
             interpdata = fft_interpolate(dset,immap,xmap,ymap,ug=None,\
@@ -224,7 +224,7 @@ def plot_images(data,mcmcresult,returnimages=False,plotcombined=False,plotall=Fa
             # Create model image at higher res, remove unlensed sources
             src = [src for src in source if src.lensed]
             imemit,_ = create_modelimage(lens,src,xemit,yemit,xemit,yemit,\
-                  [0,xemit.shape[1],0,xemit.shape[0]],sourcedatamap)
+                  [0,xemit.shape[1],0,xemit.shape[0]],sourcedatamap=sourcedatamap[row])
 
             images[row].append(imemit)
             
