@@ -108,6 +108,7 @@ def GenerateLensingGrid(data=None,xmax=None,emissionbox=[-5,5,-5,5],fieldres=Non
 
       # Calculate the indices where the high-resolution lensing grid meets the larger field grid
       indices = np.round(np.interp(np.asarray(emissionbox),fieldcoords,np.arange(Nfield)))
+      indices = [int(ind) for ind in indices] # cast to int's for newer numpy versions
 
       # Calculate the grid coordinates for the high-res lensing grid; grids meet at indices. Some pixel-shifting reqd.
       Nemx = 1 + np.abs(indices[1]-indices[0])*np.ceil((fieldcoords[1]-fieldcoords[0])/(2*emitres*rad2arcsec))
