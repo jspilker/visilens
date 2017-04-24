@@ -69,7 +69,7 @@ src = [vl.SersicSource(z=3.5, lensed=True,
       xoff={'value':-0.1,'fixed':False,'prior':[-1.,1.]},
       yoff={'value':-0.08,'fixed':False,'prior':[-1.,1.]},
       flux={'value':0.003,'fixed':False,'prior':[0.,0.08]},
-      reff={'value':0.07,'fixed':False,'prior':[0.,1.]},
+      majax={'value':0.07,'fixed':False,'prior':[0.,1.]},
       axisratio={'value':0.6,'fixed':False},
       index={'value':0.5,'fixed':False,'prior':[0.1,4.0]},
       PA={'value':90.,'fixed':False,'prior':[0.,180.]}),
@@ -78,7 +78,7 @@ src = [vl.SersicSource(z=3.5, lensed=True,
       xoff={'value':0.03,'fixed':False,'prior':[-1.,1.]},
       yoff={'value':0.04,'fixed':False,'prior':[-1.,1.]},
       flux={'value':0.004,'fixed':False,'prior':[0.,0.08]},
-      reff={'value':0.25,'fixed':False,'prior':[0.,1.]},
+      majax={'value':0.25,'fixed':False,'prior':[0.,1.]},
       axisratio={'value':0.7,'fixed':False},
       index={'value':1.,'fixed':False,'prior':[0.2,4.0]},
       PA={'value':10.,'fixed':False,'prior':[-90.,90.]}),
@@ -104,7 +104,7 @@ src = [vl.SersicSource(z=3.5, lensed=True,
 # to 512. Using large grids makes the code take MUCH longer, so I
 # strongly recommend choosing the field size and resolution carefully;
 # there's a big difference between a 1024x1024 grid and a 512x512 grid!
-xmax = 15.
+xmax = 7.5
 highresbox = [-2.5, 2.5, -0.5, 4.5]
 emitres, fieldres = 0.01, 0.06
 
@@ -134,7 +134,7 @@ modelcal = True
       
 # Now we do some setup for the MCMC run. These are the usual emcee
 # parameters which govern how many chains are run and for how long.
-nwalkers,nburn,nstep = 300,200,200
+nwalkers,nburn,nstep = 300,200,300
 
 # For multiprocessing, there's a couple options. For a single machine,
 # you can just specify the number of cores to use, like below. It can
@@ -142,7 +142,7 @@ nwalkers,nburn,nstep = 300,200,200
 # and run your script using
 # mpirun -np 64 --mca mpi_warn_on_fork 0 python Ex3_fit_continuum_SPT0202-61.py
 # [that mpi_warn just turns off some harmless scare text I find annoying]
-nthreads = 8
+nthreads = 7
 mpirun = False
 
 

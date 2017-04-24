@@ -7,6 +7,8 @@ from matplotlib.widgets import Slider,Button
 from astropy.cosmology import WMAP9 as cosmo
 
 
+# Just a quick demo script to help build intuition about lensing.
+
 xim = np.arange(-3.,3.,.02)
 yim = np.arange(-3.,3.,.02)
 
@@ -15,13 +17,14 @@ xim,yim = np.meshgrid(xim,yim)
 zLens,zSource = 0.8,5.656
 xLens,yLens = 0.,0.
 MLens,eLens,PALens = 2.87e11,0.5,70.
-xSource,ySource,FSource,sSource,nSource,arSource,PAsource = 0.216,0.24,0.02,0.1,0.8,0.7,120.-90
+xSource,ySource,FSource = 0.216,0.24,0.02 # arcsec, arcsec, Jy
+aSource,nSource,arSource,PAsource = 0.1,0.8,0.7,120.-90 # arcsec,[],[],deg CCW from x-axis
 shear,shearangle = 0.12, 120.
 
 
 Lens = vl.SIELens(zLens,xLens,yLens,MLens,eLens,PALens)
 Shear = vl.ExternalShear(shear,shearangle)
-Source = vl.SersicSource(zSource,True,xSource,ySource,FSource,sSource,nSource,arSource,PAsource)
+Source = vl.SersicSource(zSource,True,xSource,ySource,FSource,aSource,nSource,arSource,PAsource)
 Dd = cosmo.angular_diameter_distance(zLens).value
 Ds = cosmo.angular_diameter_distance(zSource).value
 Dds = cosmo.angular_diameter_distance_z1z2(zLens,zSource).value
@@ -85,8 +88,8 @@ slsa = Slider(axsa,"Angle",0.,180.,valinit=Shear.shearangle['value'])
 slxs = Slider(axxS,"x$_{Source}$",-1.5,1.5,valinit=xSource)
 slys = Slider(axyS,"y$_{Source}$",-1.5,1.5,valinit=ySource)
 slFs = Slider(axFS,"S$_{Source}$",0.01,1.,valinit=FSource)
-slws = Slider(axwS,"$r_{Source}$",0.001,0.3,valinit=sSource)
-slns = Slider(axnS,"n$_{Source}$",0.3,3.,valinit=nSource)
+slws = Slider(axwS,"$a_{Source}$",0.001,0.3,valinit=aSource)
+slns = Slider(axnS,"n$_{Source}$",0.2,2.5,valinit=nSource)
 slars = Slider(axarS,"AR$_{Source}$",0.1,1.,valinit=arSource)
 slPAs = Slider(axPAS,"PA$_{Source}$",-180,180,valinit=PAsource)
 

@@ -3,6 +3,7 @@ __all__ = ['Visdata','SersicSource','GaussSource','PointSource','SIELens','Exter
 
 import numpy as np
 import astropy.constants as co
+import warnings
 from utils import cart2pol,pol2cart
 
 c = co.c.value # speed of light, in m/s
@@ -328,7 +329,9 @@ class SersicSource(object):
       Class to hold parameters of an elliptical Sersic light profile, ie
       I(x,y) = A * exp(-bn*((r/reff)^(1/n)-1)),
       where bn makes reff enclose half the light (varies with Sersic index), 
-      and all the variable parameters are dictionaries.
+      and all the variable parameters are dictionaries. This profile is 
+      parameterized by the major axis and axis ratio; you can get the half-light
+      radius with r_eff = majax * sqrt(axisratio).
       
       Example format of each parameter:
       x = {'value':x0,'fixed':False,'prior':[xmin,xmax]}, where x0 is the
@@ -353,13 +356,11 @@ class SersicSource(object):
       flux
             Total integrated flux density of the source (ie, NOT peak pixel value), in
             units of Jy.
-      reff
+      majax
             The source major axis in arcseconds.
       index
             The Sersic profile index n (0.5 is ~Gaussian, 1 is ~an exponential disk, 4
-            is a de Vaucoleurs profile). Recommend that this not be much less than 0.3,
-            or the approximation to b(n) which makes reff enclose half the light begins
-            to break down.
+            is a de Vaucoleurs profile). 
       axisratio
             The source minor/major axis ratio, varying from 1 (circularly symmetric) to
             0 (highly elongated).
@@ -369,7 +370,7 @@ class SersicSource(object):
             is in degrees east of north.
       """
 
-      def __init__(self,z,lensed=True,xoff=None,yoff=None,flux=None,reff=None,\
+      def __init__(self,z,lensed=True,xoff=None,yoff=None,flux=None,majax=None,\
                   index=None,axisratio=None,PA=None):
             # Do some input handling.
             if not isinstance(xoff,dict):
@@ -378,8 +379,8 @@ class SersicSource(object):
                   yoff = {'value':yoff,'fixed':False,'prior':[-10.,10.]}
             if not isinstance(flux,dict):
                   flux = {'value':flux,'fixed':False,'prior':[1e-5,1.]} # 0.01 to 1Jy source
-            if not isinstance(reff,dict):
-                  reff = {'value':reff,'fixed':False,'prior':[0.,2.]} # arcsec
+            if not isinstance(majax,dict):
+                  majax = {'value':majax,'fixed':False,'prior':[0.,2.]} # arcsec
             if not isinstance(index,dict):
                   index = {'value':index,'fixed':False,'prior':[0.3,4.]}
             if not isinstance(axisratio,dict):
@@ -387,13 +388,13 @@ class SersicSource(object):
             if not isinstance(PA,dict):
                   PA = {'value':PA,'fixed':False,'prior':[0.,180.]}
 
-            if not all(['value' in d for d in [xoff,yoff,flux,reff,index,axisratio,PA]]): 
+            if not all(['value' in d for d in [xoff,yoff,flux,majax,index,axisratio,PA]]): 
                   raise KeyError("All parameter dicts must contain the key 'value'.")
 
             if not 'fixed' in xoff: xoff['fixed'] = False
             if not 'fixed' in yoff: yoff['fixed'] = False
             if not 'fixed' in flux: flux['fixed'] = False  
-            if not 'fixed' in reff: reff['fixed'] = False
+            if not 'fixed' in majax: majax['fixed'] = False
             if not 'fixed' in index: index['fixed'] = False
             if not 'fixed' in axisratio: axisratio['fixed'] = False
             if not 'fixed' in PA: PA['fixed'] = False
@@ -401,7 +402,7 @@ class SersicSource(object):
             if not 'prior' in xoff: xoff['prior'] = [-10.,10.]
             if not 'prior' in yoff: yoff['prior'] = [-10.,10.]
             if not 'prior' in flux: flux['prior'] = [1e-5,1.]
-            if not 'prior' in reff: reff['prior'] = [0.,2.]
+            if not 'prior' in majax: majax['prior'] = [0.,2.]
             if not 'prior' in index: index['prior'] = [1/3.,10]
             if not 'prior' in axisratio: axisratio['prior'] = [0.01,1.]
             if not 'prior' in PA: PA['prior'] = [0.,180.]
@@ -411,7 +412,7 @@ class SersicSource(object):
             self.xoff = xoff
             self.yoff = yoff
             self.flux = flux
-            self.reff = reff
+            self.majax = majax
             self.index = index
             self.axisratio = axisratio
             self.PA = PA
@@ -563,7 +564,23 @@ def read_visdata(filename):
       data = data[:-1]
       data = data.reshape(7,data.size/7) # bin files lose array shape, so reshape to match
 
-      return Visdata(*data,PBfwhm=PBfwhm,filename=filename)
+      data = Visdata(*data,PBfwhm=PBfwhm,filename=filename)
+      
+      # Check for auto-correlations:
+      if (data.u == 0).sum() > 0:
+          warnings.warn("Found autocorrelations when reading the data (u == v == 0); removing them...")
+          bad = data.u == 0
+          data = Visdata(data.u[~bad],data.v[~bad],data.real[~bad],data.imag[~bad],data.sigma[~bad],
+                  data.ant1[~bad],data.ant2[~bad],data.PBfwhm,data.filename)
+      
+      # Check for flagged / otherwise bad data
+      if (data.amp == 0).sum() > 0:
+          warnings.warn("Found flagged/bad data when reading the data (amplitude == 0); removing them...")
+          bad = data.amp == 0
+          data = Visdata(data.u[~bad],data.v[~bad],data.real[~bad],data.imag[~bad],data.sigma[~bad],
+                  data.ant1[~bad],data.ant2[~bad],data.PBfwhm,data.filename)
+      
+      return data
 
       
 def concatvis(visdatas):

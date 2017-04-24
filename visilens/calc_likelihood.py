@@ -1,7 +1,7 @@
 import numpy as np
 from PIL import Image
 from scipy.fftpack import fftshift,fft2
-from scipy.special import gamma
+from scipy.special import gamma, gammaincinv
 from scipy.interpolate import RectBivariateSpline
 import copy
 from lensing import *
@@ -146,7 +146,7 @@ def pass_priors(p,lens,source,scaleamp,shiftphase):
                               thissource[i].__dict__[key]['value'] = p[ip]
                               ip += 1
             elif src.__class__.__name__=='SersicSource':
-                  for key in ['xoff','yoff','flux','reff','index','axisratio','PA']:
+                  for key in ['xoff','yoff','flux','majax','index','axisratio','PA']:
                         if not vars(src)[key]['fixed']:
                               if p[ip] < vars(src)[key]['prior'][0] or p[ip] > vars(src)[key]['prior'][1]: return False
                               thissource[i].__dict__[key]['value'] = p[ip]
@@ -235,19 +235,22 @@ def SourceProfile(xsource,ysource,source,lens):
                   xs = source.xoff['value']
                   ys = source.yoff['value']
             PA, ar = source.PA['value']*deg2rad, source.axisratio['value']
-            reff, index = source.reff['value'], source.index['value']
+            majax, index = source.majax['value'], source.index['value']
             dX = (xsource-xs)*np.cos(PA) + (ysource-ys)*np.sin(PA)
             dY = (-(xsource-xs)*np.sin(PA) + (ysource-ys)*np.cos(PA))/ar
             R = np.sqrt(dX**2. + dY**2.)
             
             # Calculate b_n, to make reff enclose half the light; this approx from Ciotti&Bertin99
             # This approximation good to 1 in 10^4 for n > 0.36; for smaller n it gets worse rapidly!!
-            bn = 2*index - 1./3. + 4./(405*index) + 46./(25515*index**2) + 131./(1148175*index**3) - 2194697./(30690717750*index**4)
+            #bn = 2*index - 1./3. + 4./(405*index) + 46./(25515*index**2) + 131./(1148175*index**3) - 2194697./(30690717750*index**4)
+            # Note, now just calculating directly because everyone's scipy
+            # should be sufficiently modern.
+            bn = gammaincinv(2. * index, 0.5)
             
             # Backing out from the integral to R=inf of a general sersic profile
-            Ieff = source.flux['value'] * bn**(2*index) / (2*np.pi*reff**2 * ar * np.exp(bn) * index * gamma(2*index))
+            Ieff = source.flux['value'] * bn**(2*index) / (2*np.pi*majax**2 * ar * np.exp(bn) * index * gamma(2*index))
             
-            return Ieff * np.exp(-bn*((R/reff)**(1./index)-1.))
+            return Ieff * np.exp(-bn*((R/majax)**(1./index)-1.))
       
       elif source.__class__.__name__=='PointSource':
             if source.lensed:# and len(lens)==1:
