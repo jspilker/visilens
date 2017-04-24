@@ -1,5 +1,6 @@
 import numpy as np
 import copy
+import warnings
 from scipy.fftpack import fftshift,fft2
 from scipy.ndimage.measurements import center_of_mass
 import matplotlib.pyplot as pl; pl.ioff()
@@ -138,10 +139,13 @@ def plot_images(data,mcmcresult,returnimages=False,plotcombined=False,plotall=Fa
             f,axarr = pl.subplots(len(datasets)+1,4,figsize=(14,4*(len(datasets)+1)))
             axarr = np.atleast_2d(axarr)
             images = [[] for _ in range(len(datasets)+1)]
+            if sourcedatamap[0] is not None: warnings.warn("sourcedatamap[0] is not None. Are you sure you want plotall=True?")
+            sourcedatamap.append(None)
       elif plotcombined:
             f,axarr = pl.subplots(1,4,figsize=(12,3))
             axarr = np.atleast_2d(axarr)
             images = [[]]
+            sourcedatamap = [None]
       else:
             f,axarr = pl.subplots(len(datasets),4,figsize=(14,4*len(datasets)))
             axarr = np.atleast_2d(axarr)
@@ -201,7 +205,7 @@ def plot_images(data,mcmcresult,returnimages=False,plotcombined=False,plotall=Fa
                   except TypeError:
                         s = float(level)
             
-            print "Data - Model rms: ",imdiff.std()
+            print "Data - Model rms: {0:0.3e}".format(imdiff.std())
             axarr[row,0].imshow(imdata,interpolation='nearest',extent=ext,cmap=cmap)
             axarr[row,0].contour(imdata,extent=ext,colors='k',origin='image',levels=s*mapcontours)
             axarr[row,0].set_xlim(limits[0],limits[1]); axarr[row,0].set_ylim(limits[2],limits[3])
