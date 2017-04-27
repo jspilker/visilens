@@ -44,7 +44,7 @@ def TrianglePlot_MCMC(mcmcresult,plotmag=True,plotnuisance=False):
       labelmap = {'xL':'$x_{L}$, arcsec','yL':'$y_{L}$, arcsec','ML':'$M_{L}$, $10^{11} M_\odot$',\
             'eL':'$e_{L}$','PAL':'$\\theta_{L}$, deg E of N','xoffS':'$\Delta x_{S}$, arcsec','yoffS':'$\Delta y_{S}$, arcsec',\
             'fluxS':'$F_{S}$, mJy','widthS':'$\sigma_{S}$, arcsec','majaxS':'$a_{S}$, arcsec',\
-            'indexS':'$n_{S}$','axisratioS':'$b_{S}/\\alpha_{S}$','PAS':'$\phi_{S}$, deg E of N',\
+            'indexS':'$n_{S}$','axisratioS':'$b_{S}/a_{S}$','PAS':'$\phi_{S}$, deg E of N',\
             'shear':'$\gamma$','shearangle':'$\\theta_\gamma$',
             'mu':'$\mu_{}$','ampscale_dset':'$A_{}$',
             'astromshift_x_dset':'$\delta x_{}$, arcsec','astromshift_y_dset':'$\delta y_{}$, arcsec'}
