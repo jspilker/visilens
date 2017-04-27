@@ -42,9 +42,9 @@ def TrianglePlot_MCMC(mcmcresult,plotmag=True,plotnuisance=False):
       if not plotnuisance: allcols = [x for x in allcols if not any([l in x for l in nuisance])]
 
       labelmap = {'xL':'$x_{L}$, arcsec','yL':'$y_{L}$, arcsec','ML':'$M_{L}$, $10^{11} M_\odot$',\
-            'eL':'$e_{L}$','PAL':'$\\theta_{L}$, deg E of N','xoffS':'$\Delta x_{S}$, arcsec','yoffS':'$\Delta y_{S}$, arcsec',\
+            'eL':'$e_{L}$','PAL':'$\\theta_{L}$, deg CCW from E','xoffS':'$\Delta x_{S}$, arcsec','yoffS':'$\Delta y_{S}$, arcsec',\
             'fluxS':'$F_{S}$, mJy','widthS':'$\sigma_{S}$, arcsec','majaxS':'$a_{S}$, arcsec',\
-            'indexS':'$n_{S}$','axisratioS':'$b_{S}/a_{S}$','PAS':'$\phi_{S}$, deg E of N',\
+            'indexS':'$n_{S}$','axisratioS':'$b_{S}/a_{S}$','PAS':'$\phi_{S}$, deg CCW from E',\
             'shear':'$\gamma$','shearangle':'$\\theta_\gamma$',
             'mu':'$\mu_{}$','ampscale_dset':'$A_{}$',
             'astromshift_x_dset':'$\delta x_{}$, arcsec','astromshift_y_dset':'$\delta y_{}$, arcsec'}
