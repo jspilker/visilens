@@ -3,6 +3,7 @@ import matplotlib.cm as cm
 from matplotlib.ticker import MaxNLocator
 import scipy.ndimage
 import numpy as np
+import re
 import copy
 
 __all__ = ['TrianglePlot_MCMC','marginalize_2d','marginalize_1d']
@@ -62,10 +63,12 @@ def TrianglePlot_MCMC(mcmcresult,plotmag=True,plotnuisance=False):
                   if 'fluxS' in yax: y *= 1e3 
                   # Figure out the axis labels...
                   if xax[-1].isdigit():
-                        xlab = (xax[-1]+'}$').join(labelmap[xax[:-1]].split('}$'))
+                        digit = re.search(r'\d+$',xax).group()
+                        xlab = (digit+'}$').join(labelmap[xax[:-len(digit)]].split('}$'))
                   else: xlab = labelmap[xax]
                   if yax[-1].isdigit():
-                        ylab = (yax[-1]+'}$').join(labelmap[yax[:-1]].split('}$'))
+                        digit = re.search(r'\d+$',yax).group()
+                        ylab = (digit+'}$').join(labelmap[yax[:-len(digit)]].split('}$'))
                   else: ylab = labelmap[yax]
 
                   # To counter outlying walkers stuck in regions of low likelihood, we use percentiles
