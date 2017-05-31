@@ -80,7 +80,7 @@ def TrianglePlot_MCMC(mcmcresult,plotmag=True,plotnuisance=False):
                   
                   if row > col:
                         try: marginalize_2d(x,y,axarr[row,col],\
-                              extent=[xmin,xmax,ymin,ymax],bins=max(np.floor(x.size/1000),50))
+                              extent=[xmin,xmax,ymin,ymax],bins=int(max(np.floor(x.size/1000),50)))
                         except ValueError: print xax,yax; raise ValueError("One of the columns has no dynamic range.")
                         if col > 0: pl.setp(axarr[row,col].get_yticklabels(),visible=False)
                         else: axarr[row,col].set_ylabel(ylab,fontsize='x-large')
@@ -90,7 +90,7 @@ def TrianglePlot_MCMC(mcmcresult,plotmag=True,plotnuisance=False):
                         axarr[row,col].yaxis.set_major_locator(MaxNLocator(5))
                   elif row == col:
                         marginalize_1d(x,axarr[row,col],extent=[xmin,xmax],\
-                              bins=max(np.floor(x.size/1000),50))
+                              bins=int(max(np.floor(x.size/1000),50)))
                         if row<len(allcols)-1: axarr[row,col].set_xlabel(xlab,fontsize='x-large')
                         if col<len(allcols)-1: pl.setp(axarr[row,col].get_xticklabels(),visible=False)
                         axarr[row,col].xaxis.set_major_locator(MaxNLocator(5))
@@ -131,7 +131,7 @@ def marginalize_2d(x,y,axobj,*args,**kwargs):
       """
 
       # Get values of various possible kwargs
-      bins = kwargs.pop('bins',50)
+      bins = int(kwargs.pop('bins',50))
       levs = kwargs.pop('levs',[1.,2.,3.])
       extent = kwargs.pop('extent',[x.min(),x.max(),y.min(),y.max()])
       cmap = kwargs.pop('cmap','Greys')
@@ -187,7 +187,7 @@ def marginalize_1d(x,axobj,*args,**kwargs):
             Axes object on which to plot.
       """
 
-      bins = kwargs.pop('bins',50)
+      bins = int(kwargs.pop('bins',50))
       extent = kwargs.pop('extent',[x.min(),x.max()])
       fillcolor = kwargs.pop('color','gray')
 

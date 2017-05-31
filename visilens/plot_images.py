@@ -193,7 +193,7 @@ def plot_images(data,mcmcresult,returnimages=False,plotcombined=False,plotall=Fa
             imdiff = imdata - immodel
 
             if returnimages: 
-                  images[row].append(imdata); images[row].append(immodel)#; images[i].append(immap)
+                  images[row].append(imdata); images[row].append(immodel)
             
             # Plot everything up
             ext = [-imsize*pixsize/2.,imsize*pixsize/2.,-imsize*pixsize/2.,imsize*pixsize/2.]
