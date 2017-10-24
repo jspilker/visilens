@@ -4,7 +4,7 @@ import visilens as vl
 import matplotlib.pyplot as pl; pl.ioff()
 import matplotlib.cm as cm
 from matplotlib.widgets import Slider,Button
-from astropy.cosmology import WMAP9 as cosmo
+from astropy.cosmology import Planck15 as cosmo
 
 
 # Just a quick demo script to help build intuition about lensing.

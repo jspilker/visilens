@@ -2,7 +2,7 @@ import numpy as np
 import sys; sys.path.append('..')
 import visilens as vl
 from matplotlib.widgets import Slider,Button
-from astropy.cosmology import WMAP9 as cosmo
+from astropy.cosmology import Planck15 as cosmo
 import matplotlib.pyplot as pl
 pl.ioff()
 
@@ -23,17 +23,18 @@ Source = vl.GaussSource(zSource,True,xSource,ySource,FSource,sSource)
 Dd = cosmo.angular_diameter_distance(zLens).value
 Ds = cosmo.angular_diameter_distance(zSource).value
 Dds = cosmo.angular_diameter_distance_z1z2(zLens,zSource).value
-caustics = vl.CausticsSIE(Lens,Dd,Ds,Dds,Shear)
+caustics = vl.get_caustics(lens,Dd,Ds,Dds)
 
 xsource,ysource = vl.LensRayTrace(xim,yim,lens,Dd,Ds,Dds)
+
 
 f = pl.figure()
 ax = f.add_subplot(111,aspect='equal')
 pl.subplots_adjust(bottom=0.25,top=0.98)
 
 ax.plot(xsource,ysource,'b-')
-for i in range(caustics.shape[0]):
-      ax.plot(caustics[i,0,:],caustics[i,1,:],'k-')
+for caustic in caustics:
+      ax.plot(caustic[:,0],caustic[:,1],'k-')
 
 # Put in a bunch of sliders to control lensing parameters
 
@@ -70,11 +71,11 @@ def update(val):
       newLens = vl.SIELens(zLens,xL,yL,10**ML,eL,PAL)
       newShear = vl.ExternalShear(sh,sha)
       xsource,ysource = vl.LensRayTrace(xim,yim,[newLens,newShear],newDd,newDs,newDds)
-      caustics = vl.CausticsSIE(newLens,newDd,newDs,newDds,newShear)
+      caustics = vl.get_caustics([newLens,newShear],newDd,newDs,newDds)
       ax.cla()
       ax.plot(xsource,ysource,'b-')
-      for i in range(caustics.shape[0]):
-            ax.plot(caustics[i,0,:],caustics[i,1,:],'k-')
+      for caustic in caustics:
+            ax.plot(caustic[:,0],caustic[:,1],'k-')
       #ax.set_xlim(-0.5,0.5)
       #ax.set_ylim(-0.5,0.5)
       #for i in range(len(xs)):

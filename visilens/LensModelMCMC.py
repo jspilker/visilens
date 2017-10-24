@@ -4,7 +4,7 @@ import os
 import sys
 import emcee
 import copy
-from astropy.cosmology import WMAP9
+from astropy.cosmology import Planck15
 from class_utils import *
 from lensing import *
 from utils import *
@@ -15,7 +15,7 @@ arcsec2rad = np.pi/180/3600
 def LensModelMCMC(data,lens,source,
                   xmax=30.,highresbox=[-3.,3.,3.,-3.],emitres=None,fieldres=None,
                   sourcedatamap=None, scaleamp=False, shiftphase=False,
-                  modelcal=True,cosmo=WMAP9,
+                  modelcal=True,cosmo=Planck15,
                   nwalkers=1e3,nburn=1e3,nstep=1e3,pool=None,nthreads=1,mpirun=False):
       """
       Wrapper function which basically takes what the user wants and turns it into the
@@ -56,6 +56,7 @@ def LensModelMCMC(data,lens,source,
       cosmo:
             The cosmology to use, as an astropy object, e.g.,
             from astropy.cosmology import WMAP9; cosmo=WMAP9
+            Default is Planck15.
       nwalkers:
             Number of walkers to use in the mcmc process; see dan.iel.fm/emcee/current
             for more details.
@@ -189,7 +190,7 @@ def LensModelMCMC(data,lens,source,
       # Calculate some distances; we only need to calculate these once.
       # This assumes multiple sources are all at same z; should be this
       # way anyway or else we'd have to deal with multiple lensing planes
-      if cosmo is None: cosmo = WMAP9
+      if cosmo is None: cosmo = Planck15
       Dd = cosmo.angular_diameter_distance(lens[0].z).value
       Ds = cosmo.angular_diameter_distance(source[0].z).value
       Dds= cosmo.angular_diameter_distance_z1z2(lens[0].z,source[0].z).value

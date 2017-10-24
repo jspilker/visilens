@@ -296,9 +296,9 @@ def create_modelimage(lens,source,xmap,ymap,xemit,yemit,indices,
       mus = np.zeros(len(source))
       immap, imsrc = np.zeros(xmap.shape), np.zeros(xemit.shape)
 
-      # If we didn't get pre-calculated distances, figure them here assuming WMAP9
+      # If we didn't get pre-calculated distances, figure them here assuming Planck15
       if np.any((Dd is None,Ds is None, Dds is None)):
-            from astropy.cosmology import WMAP9 as cosmo
+            from astropy.cosmology import Planck15 as cosmo
             Dd = cosmo.angular_diameter_distance(lens[0].z).value
             Ds = cosmo.angular_diameter_distance(source[0].z).value
             Dds= cosmo.angular_diameter_distance_z1z2(lens[0].z,source[0].z).value
