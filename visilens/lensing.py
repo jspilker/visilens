@@ -1,9 +1,10 @@
 import numpy as np
+import matplotlib.pyplot as pl; pl.ioff()
 import scipy.sparse
 import copy
 from class_utils import *
 from utils import *
-from astropy.cosmology import WMAP9
+from astropy.cosmology import Planck15
 import astropy.constants as co
 
 c = co.c.value # speed of light, in m/s
@@ -15,7 +16,7 @@ rad2arcsec =3600.*180./np.pi
 deg2rad = np.pi/180.
 rad2deg = 180./np.pi
 
-__all__ = ['LensRayTrace','GenerateLensingGrid','thetaE','CausticsSIE']
+__all__ = ['LensRayTrace','GenerateLensingGrid','thetaE','get_caustics','CausticsSIE']
 
 def LensRayTrace(xim,yim,lens,Dd,Ds,Dds):
       """
@@ -121,10 +122,10 @@ def GenerateLensingGrid(data=None,xmax=None,emissionbox=[-5,5,-5,5],fieldres=Non
 
       return xmapfield,ymapfield,xmapemission,ymapemission,indices
       
-def thetaE(ML,zL,zS,cosmo=WMAP9):
+def thetaE(ML,zL,zS,cosmo=Planck15):
       """
       Calculate the Einstein radius in arcsec of a lens of mass ML,
-      assuming redshifts zL and zS. If cosmo is None, WMAP9
+      assuming redshifts zL and zS. If cosmo is None, Planck15
       is assumed. ML is in solar masses.
       """
       
@@ -135,6 +136,93 @@ def thetaE(ML,zL,zS,cosmo=WMAP9):
       thE = np.sqrt((4*G*ML*Msun*Dds) / (c**2 * Dd*Ds*Mpc)) * rad2arcsec
       
       return thE
+      
+def get_caustics(lens,Dd,Ds,Dds,highresbox=[-2.,2.,-2.,2.],numres=0.01):
+      """
+      Routine to calculate the locations for the lensing caustics.
+      If lens is either a single SIELens or a [SIELens,ExternalShear],
+      we calculate the caustics analytically, otherwise it has to be
+      a numerical calculation.
+      
+      Inputs:
+      lens:
+            Either a single SIELens object, or a list of lens/shear
+            objects. If a single SIELens or one lens and shear, we
+            calculate the caustic locations analytically. If there's
+            more than one lens, we calculate the caustics numerically.
+            In this case you may want to play with the highresbox
+            and numres parameters, which affect how precisely the
+            caustics are calculated.
+      
+      Dd,Ds,Dds:
+            Angular diameter distances to the lens, source, and lens-source,
+            respectively.
+      
+      highresbox:
+            List of four coordinates, [xmin, xmax, ymin, ymax], within
+            which the caustics lie. You want this box to fully contain
+            the caustics. A good rule of thumb would be to pad the
+            positions of your lenses with the Einstein radius of the most
+            massive lens.
+      
+      numres:
+            Resolution (in arcsec) of the highresbox above. A smaller
+            number here will make the caustics look nicer, because there
+            are more points to connect to make the caustics. This matters
+            most for the outer (ellipse-shaped, usually) caustic.
+      
+      Returns:
+      2xN list:
+            Arrays containing the x and y coordinates for the caustics that
+            exist, with x and y in arcsec under the same convention as the
+            rest of the code (+y = north, +x = east). You can plot them with,
+            e.g.,
+            Standard matplotlib axis object:
+            for caustic in caustics:
+                  ax.plot(caustic[:,0],caustics[:,1],ls='-',marker='',lw=1)
+            aplpy FITSFigure for fits image plotting:
+            ax = aplpy.FITSFigure('myimage.fits')
+            myfitshead = astropy.fits.open('myimage.fits')[0].header
+            ref_ra, ref_dec = myfitshead['CRVAL1'], myfitshead['CRVAL2']
+            for i in range(caustics.shape[0]):
+                  ax.show_lines([np.vstack([caustics[:,0]+ref_ra,caustics[:,1]+ref_dec])],color='k',lw=1)
+      
+      """
+      
+      # Figure out if we can do this analytically
+      lens = list(np.array([lens]).flatten())
+      for l in lens: l._altered = True
+      lens = [copy.deepcopy(l) for l in lens]
+      whichlens = [isinstance(l,SIELens) for l in lens]
+      whichshear = [isinstance(l,ExternalShear) for l in lens]
+      
+      if sum(whichlens) == 1:
+            if sum(whichshear) == 1:
+                  return CausticsSIE(lens[0],Dd,Ds,Dds,lens[1])
+            else:
+                  return CausticsSIE(lens[0],Dd,Ds,Dds,Shear=None)
+      else: # we calculate them numerically
+            # first try to figure out where the caustics are going to be
+            # based on position & einstein radii
+            cximage = np.arange(highresbox[0],highresbox[1],numres)
+            cyimage = np.arange(highresbox[2],highresbox[3],numres)
+            cximage, cyimage = np.meshgrid(cximage,cyimage)
+            xsource,ysource = LensRayTrace(cximage,cyimage,lens,Dd,Ds,Dds)
+            jxy, jxx = np.gradient(xsource); jyy, jyx = np.gradient(ysource)
+            A = jxx*jyy - jxy*jyx
+            # it's pretty dumb that we have to do this...
+            tmpfig = pl.figure(); dummyax = tmpfig.add_subplot(111)
+            cset = dummyax.contour(xsource,ysource,A,levels=[0.])
+            pl.close(tmpfig)
+            contours = cset.collections[0].get_paths()
+            caustics = []
+            for contour in contours:
+                  xcon,ycon = contour.vertices[:,0], contour.vertices[:,1]
+                  caustic = np.vstack([xcon,ycon]).T
+                  caustics.append(caustic)
+            for l in lens: l._altered = True
+            return caustics
+            
 
 def CausticsSIE(SIELens,Dd,Ds,Dds,Shear=None):
       """
@@ -154,7 +242,7 @@ def CausticsSIE(SIELens,Dd,Ds,Dds,Shear=None):
       Returns:
       2xN list:
             Arrays containing the x and y coordinates for the caustics that exist (i.e.,
-            will have [xr,yr] for the radial caustic only if lens ellipticity==0, otherwise
+            will have [[xr,yr]] for the radial caustic only if lens ellipticity==0, otherwise
             will have [[xr,yr],[xt,yt]] for radial+diamond caustics)
       """
 
@@ -203,7 +291,7 @@ def CausticsSIE(SIELens,Dd,Ds,Dds,Shear=None):
                   xt += SIELens.x['value']
                   yt += SIELens.y['value']
 
-                  return np.atleast_3d([[xr,yr],[xt,yt]])
+                  return [np.array([xr,yr]).T,np.array([xt,yt]).T]
 
       else: # Blerg, complicated expressions... Keeton+00, but at least radial pseudo-caustic doesn't depend on shear       
             s, sa = Shear.shear['value'], (Shear.shearangle['value']-SIELens.PA['value'])*deg2rad
@@ -225,7 +313,7 @@ def CausticsSIE(SIELens,Dd,Ds,Dds,Shear=None):
                   r,th = cart2pol(xr,yr)
                   xr,yr = pol2cart(r,th+SIELens.PA['value']*deg2rad)
                   
-                  return np.atleast_3d([[xr,yr],[xt,yt]])
+                  return [np.array([xr,yr]).T,np.array([xt,yt]).T]
 
             else:
                   rcrit = np.sqrt(2.*f)*b*(1.+s*np.cos(2.*(phi-sa))) / ((1.-s**2.)*np.sqrt((1+f**2.) - (1-f**2.)*np.cos(2*phi)))
@@ -247,4 +335,4 @@ def CausticsSIE(SIELens,Dd,Ds,Dds,Shear=None):
                   xr += SIELens.x['value']
                   yr += SIELens.y['value']
 
-                  return np.atleast_3d([[xr,yr],[xt,yt]])
+                  return [np.array([xr,yr]).T,np.array([xt,yt]).T]
