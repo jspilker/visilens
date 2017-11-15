@@ -13,7 +13,7 @@ from calc_likelihood import calc_vis_lnlike
 arcsec2rad = np.pi/180/3600
 
 def LensModelMCMC(data,lens,source,
-                  xmax=30.,highresbox=[-3.,3.,3.,-3.],emitres=None,fieldres=None,
+                  xmax=30.,highresbox=[-3.,3.,-3.,3.],emitres=None,fieldres=None,
                   sourcedatamap=None, scaleamp=False, shiftphase=False,
                   modelcal=True,cosmo=Planck15,
                   nwalkers=1e3,nburn=1e3,nstep=1e3,pool=None,nthreads=1,mpirun=False):
@@ -34,8 +34,9 @@ def LensModelMCMC(data,lens,source,
             (Half-)Grid size, in arcseconds; the grid will span +/-xmax in x&y
       highresbox:
             The region to model at higher resolution (to account for high-magnification
-            and differential lensing effects). Note the sign convention is:
-            +x = West, +y = South, so highresbox[2] will be > highresbox[3]
+            and differential lensing effects), as [xmin, xmax, ymin, ymax]. 
+            Note the sign convention is: +x = West, +y = North, like the lens
+            positions.
       sourcedatamap:
             A list of length the number of datasets which tells which source(s)
             are to be fit to which dataset(s). Eg, if two sources are to be fit
