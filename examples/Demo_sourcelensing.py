@@ -9,8 +9,8 @@ from astropy.cosmology import Planck15 as cosmo
 
 # Just a quick demo script to help build intuition about lensing.
 
-xim = np.arange(-3.,3.,.02)
-yim = np.arange(-3.,3.,.02)
+xim = np.arange(-2.,2.,.02)
+yim = np.arange(-2.,2.,.02)
 
 xim,yim = np.meshgrid(xim,yim)
 
@@ -18,7 +18,7 @@ zLens,zSource = 0.8,5.656
 xLens,yLens = 0.,0.
 MLens,eLens,PALens = 2.87e11,0.5,70.
 xSource,ySource,FSource = 0.216,0.24,0.02 # arcsec, arcsec, Jy
-aSource,nSource,arSource,PAsource = 0.1,0.8,0.7,120.-90 # arcsec,[],[],deg CCW from x-axis
+aSource,nSource,arSource,PAsource = 0.1,0.5,1.0,120.-90 # arcsec,[],[],deg CCW from x-axis
 shear,shearangle = 0.12, 120.
 
 
@@ -50,10 +50,12 @@ cmlens._lut[0,-1] = 0.
 ax.imshow(imbg,cmap=cmbg,extent=[xim.min(),xim.max(),yim.min(),yim.max()],origin='lower')
 ax.imshow(imlensed,cmap=cmlens,extent=[xim.min(),xim.max(),yim.min(),yim.max()],origin='lower')
 mu = imlensed.sum()*(xim[0,1]-xim[0,0])**2 / Source.flux['value']
-ax.text(0.9,1.05,'$\\mu$ = {0:.2f}'.format(mu),transform=ax.transAxes)
+ax.text(0.9,1.02,'$\\mu$ = {0:.2f}'.format(mu),transform=ax.transAxes)
 
-for i in range(caustics.shape[0]):
-      ax.plot(caustics[i,0,:],caustics[i,1,:],'k-')
+#for i in range(caustics.shape[0]):
+#      ax.plot(caustics[i,0,:],caustics[i,1,:],'k-')
+for caustic in caustics:
+	ax.plot(caustic[:,0],caustic[:,1],'k-')
 
 # Put in a bunch of sliders to control lensing parameters
 
@@ -88,7 +90,7 @@ slsa = Slider(axsa,"Angle",0.,180.,valinit=Shear.shearangle['value'])
 slxs = Slider(axxS,"x$_{Source}$",-1.5,1.5,valinit=xSource)
 slys = Slider(axyS,"y$_{Source}$",-1.5,1.5,valinit=ySource)
 slFs = Slider(axFS,"S$_{Source}$",0.01,1.,valinit=FSource)
-slws = Slider(axwS,"$a_{Source}$",0.001,0.3,valinit=aSource)
+slws = Slider(axwS,"$a_{Source}$",0.001,0.2,valinit=aSource)
 slns = Slider(axnS,"n$_{Source}$",0.2,2.5,valinit=nSource)
 slars = Slider(axarS,"AR$_{Source}$",0.1,1.,valinit=arSource)
 slPAs = Slider(axPAS,"PA$_{Source}$",-180,180,valinit=PAsource)
@@ -117,10 +119,12 @@ def update(val):
       ax.imshow(imbg,cmap=cmbg,extent=[xim.min(),xim.max(),yim.min(),yim.max()],origin='lower')
       ax.imshow(imlensed,cmap=cmlens,extent=[xim.min(),xim.max(),yim.min(),yim.max()],origin='lower')
       mu = imlensed.sum()*(xim[0,1]-xim[0,0])**2 / newSource.flux['value']
-      ax.text(0.9,1.05,'$\\mu$ = {0:.2f}'.format(mu),transform=ax.transAxes)
+      ax.text(0.9,1.02,'$\\mu$ = {0:.2f}'.format(mu),transform=ax.transAxes)
 
-      for i in range(caustics.shape[0]):
-            ax.plot(caustics[i,0,:],caustics[i,1,:],'k-')
+      #for i in range(caustics.shape[0]):
+      #      ax.plot(caustics[i,0,:],caustics[i,1,:],'k-')
+      for caustic in caustics:
+      		ax.plot(caustic[:,0],caustic[:,1],'k-')
 
       f.canvas.draw_idle()
 
