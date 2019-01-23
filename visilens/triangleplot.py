@@ -37,8 +37,7 @@ def TrianglePlot_MCMC(mcmcresult,plotmag=True,plotnuisance=False):
       nuisance = ['xL','yL','ampscale_dset','astromshift_x_dset','astromshift_y_dset']
       allcols = list(mcmcresult['chains'].dtype.names)
       # Gets rid of mag for unlensed sources, which is always 1.
-      for col in allcols:
-            if 'mu' in col and np.allclose(mcmcresult['chains'][col],1.): allcols.remove(col)
+      allcols = [col for col in allcols if not ('mu' in col and np.allclose(mcmcresult['chains'][col],1.))]
       if not plotmag: allcols = [x for x in allcols if not 'mu' in x]
       if not plotnuisance: allcols = [x for x in allcols if not any([l in x for l in nuisance])]
 
