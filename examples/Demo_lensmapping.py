@@ -40,15 +40,15 @@ for caustic in caustics:
 
 axcolor='lightgoldenrodyellow'
 ytop,ystep = 0.2,0.035
-axzL = pl.axes([0.07,ytop,0.4,0.03],axisbg=axcolor)
-axzS = pl.axes([0.07,ytop-ystep,0.4,0.03],axisbg=axcolor)
-axxL = pl.axes([0.07,ytop-2*ystep,0.4,0.03],axisbg=axcolor)
-axyL = pl.axes([0.07,ytop-3*ystep,0.4,0.03],axisbg=axcolor)
-axML = pl.axes([0.07,ytop-4*ystep,0.4,0.03],axisbg=axcolor)
-axeL = pl.axes([0.56,ytop,0.4,0.03],axisbg=axcolor)
-axPAL= pl.axes([0.56,ytop-ystep,0.4,0.03],axisbg=axcolor)
-axss = pl.axes([0.56,ytop-2*ystep,0.4,0.03],axisbg=axcolor)
-axsa = pl.axes([0.56,ytop-3*ystep,0.4,0.03],axisbg=axcolor)
+axzL = pl.axes([0.07,ytop,0.4,0.03],facecolor=axcolor)
+axzS = pl.axes([0.07,ytop-ystep,0.4,0.03],facecolor=axcolor)
+axxL = pl.axes([0.07,ytop-2*ystep,0.4,0.03],facecolor=axcolor)
+axyL = pl.axes([0.07,ytop-3*ystep,0.4,0.03],facecolor=axcolor)
+axML = pl.axes([0.07,ytop-4*ystep,0.4,0.03],facecolor=axcolor)
+axeL = pl.axes([0.56,ytop,0.4,0.03],facecolor=axcolor)
+axPAL= pl.axes([0.56,ytop-ystep,0.4,0.03],facecolor=axcolor)
+axss = pl.axes([0.56,ytop-2*ystep,0.4,0.03],facecolor=axcolor)
+axsa = pl.axes([0.56,ytop-3*ystep,0.4,0.03],facecolor=axcolor)
 
 slzL = Slider(axzL,"z$_{Lens}$",0.01,3.0,valinit=zLens)
 slzS = Slider(axzS,"z$_{Source}$",slzL.val,10.0,valinit=zSource)
