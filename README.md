@@ -1,6 +1,24 @@
 visilens
 ========
 
+News / updates
+--------------
+
+I have finally, finally made the jump to python3 now that 
+python2.7 has been sunset. Any and all future development will
+be in a python3 environment. Along with that switch, I'm 
+updating all the external dependencies to modern versions of those
+packages.
+
+If you need a python2.7 version of this package, you can find the
+final release version [here](https://github.com/jspilker/visilens/releases/tag/v1.0).
+I know that version works with versions of `emcee` up to at least
+2.1.0, but that package has changed a lot of function calls in newer versions.
+
+
+About visilens
+--------------
+
 Visilens is a python module for modeling gravitational lensing
 systems observed by a radio/mm interferometer like ALMA or ATCA.
 Because interferometers observe the Fourier components of the
