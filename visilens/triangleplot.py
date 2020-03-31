@@ -80,7 +80,7 @@ def TrianglePlot_MCMC(mcmcresult,plotmag=True,plotnuisance=False):
                   if row > col:
                         try: marginalize_2d(x,y,axarr[row,col],\
                               extent=[xmin,xmax,ymin,ymax],bins=int(max(np.floor(x.size/1000),50)))
-                        except ValueError: print xax,yax; raise ValueError("One of the columns has no dynamic range.")
+                        except ValueError: print(xax,yax); raise ValueError("One of the columns has no dynamic range.")
                         if col > 0: pl.setp(axarr[row,col].get_yticklabels(),visible=False)
                         else: axarr[row,col].set_ylabel(ylab,fontsize='x-large')
                         if row<len(allcols)-1: pl.setp(axarr[row,col].get_xticklabels(),visible=False)

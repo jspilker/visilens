@@ -1,9 +1,8 @@
 import numpy as np
-import matplotlib.pyplot as pl; pl.ioff()
-import scipy.sparse
+import matplotlib.pyplot as plt; plt.ioff()
 import copy
-from class_utils import *
-from utils import *
+from .class_utils import *
+from .utils import *
 from astropy.cosmology import Planck15
 import astropy.constants as co
 
@@ -104,7 +103,7 @@ def GenerateLensingGrid(data=None,xmax=None,emissionbox=[-5,5,-5,5],fieldres=Non
       Nfield = 2**np.ceil(np.log2(2*np.abs(xmax)*arcsec2rad/fieldres))
 
       # Calculate the grid coordinates for the larger field.
-      fieldcoords = np.linspace(-np.abs(xmax),np.abs(xmax),Nfield)
+      fieldcoords = np.linspace(-np.abs(xmax),np.abs(xmax),int(Nfield))
       xmapfield,ymapfield = np.meshgrid(fieldcoords,fieldcoords)
 
       # Calculate the indices where the high-resolution lensing grid meets the larger field grid
@@ -114,8 +113,8 @@ def GenerateLensingGrid(data=None,xmax=None,emissionbox=[-5,5,-5,5],fieldres=Non
       # Calculate the grid coordinates for the high-res lensing grid; grids meet at indices. Some pixel-shifting reqd.
       Nemx = 1 + np.abs(indices[1]-indices[0])*np.ceil((fieldcoords[1]-fieldcoords[0])/(2*emitres*rad2arcsec))
       Nemy = 1 + np.abs(indices[3]-indices[2])*np.ceil((fieldcoords[1]-fieldcoords[0])/(2*emitres*rad2arcsec))
-      xemcoords = np.linspace(fieldcoords[indices[0]],fieldcoords[indices[1]],Nemx)
-      yemcoords = np.linspace(fieldcoords[indices[2]],fieldcoords[indices[3]],Nemy)
+      xemcoords = np.linspace(fieldcoords[indices[0]],fieldcoords[indices[1]],int(Nemx))
+      yemcoords = np.linspace(fieldcoords[indices[2]],fieldcoords[indices[3]],int(Nemy))
       xmapemission,ymapemission = np.meshgrid(xemcoords,yemcoords)
       xmapemission -= (xmapemission[0,1]-xmapemission[0,0])
       ymapemission -= abs((ymapemission[1,0]-ymapemission[0,0]))
@@ -179,7 +178,7 @@ def get_caustics(lens,Dd,Ds,Dds,highresbox=[-2.,2.,-2.,2.],numres=0.01):
             e.g.,
             Standard matplotlib axis object:
             for caustic in caustics:
-                  ax.plot(caustic[:,0],caustics[:,1],ls='-',marker='',lw=1)
+                  ax.plot(caustic[:,0],caustic[:,1],ls='-',marker='',lw=1)
             aplpy FITSFigure for fits image plotting:
             ax = aplpy.FITSFigure('myimage.fits')
             myfitshead = astropy.fits.open('myimage.fits')[0].header
@@ -211,9 +210,9 @@ def get_caustics(lens,Dd,Ds,Dds,highresbox=[-2.,2.,-2.,2.],numres=0.01):
             jxy, jxx = np.gradient(xsource); jyy, jyx = np.gradient(ysource)
             A = jxx*jyy - jxy*jyx
             # it's pretty dumb that we have to do this...
-            tmpfig = pl.figure(); dummyax = tmpfig.add_subplot(111)
+            tmpfig = plt.figure(); dummyax = tmpfig.add_subplot(111)
             cset = dummyax.contour(xsource,ysource,A,levels=[0.])
-            pl.close(tmpfig)
+            plt.close(tmpfig)
             contours = cset.collections[0].get_paths()
             caustics = []
             for contour in contours:

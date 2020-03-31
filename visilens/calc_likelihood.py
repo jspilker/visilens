@@ -4,9 +4,9 @@ from scipy.fftpack import fftshift,fft2
 from scipy.special import gamma, gammaincinv
 from scipy.interpolate import RectBivariateSpline
 import copy
-from lensing import *
-from class_utils import *
-from utils import *
+from .lensing import *
+from .class_utils import *
+from .utils import *
 
 arcsec2rad = np.pi/180/3600
 rad2arcsec = 3600.*180./np.pi

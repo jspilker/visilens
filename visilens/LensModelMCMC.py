@@ -5,10 +5,10 @@ import sys
 import emcee
 import copy
 from astropy.cosmology import Planck15
-from class_utils import *
-from lensing import *
-from utils import *
-from calc_likelihood import calc_vis_lnlike
+from .class_utils import *
+from .lensing import *
+from .utils import *
+from .calc_likelihood import calc_vis_lnlike
 
 arcsec2rad = np.pi/180/3600
 
@@ -220,23 +220,23 @@ def LensModelMCMC(data,lens,source,
 
       
       # Run burn-in phase
-      print "Running burn-in... "
+      print("Running burn-in... ")
       #pos,prob,rstate,mus = lenssampler.run_mcmc(initials,nburn,storechain=False)
       for i,result in enumerate(lenssampler.sample(initials,iterations=nburn,storechain=False)):
-            if i%20==0: print 'Burn-in step ',i,'/',nburn
+            if i%20==0: print('Burn-in step ',i,'/',nburn)
             pos,prob,rstate,blob = result
       
       
       lenssampler.reset()
       
       # Run actual chains
-      print "Done. Running chains... "
+      print("Done. Running chains... ")
       for i,result in enumerate(lenssampler.sample(pos,rstate0=rstate,iterations=nstep,storechain=True)):
-            if i%20==0: print 'Chain step ',i,'/',nstep
+            if i%20==0: print('Chain step ',i,'/',nstep)
       
       #lenssampler.run_mcmc(pos,nstep,rstate0=rstate)
       if mpirun: pool.close()
-      print "Mean acceptance fraction: ",np.mean(lenssampler.acceptance_fraction)
+      print("Mean acceptance fraction: ",np.mean(lenssampler.acceptance_fraction))
 
       #return lenssampler.flatchain,lenssampler.blobs,colnames
       
