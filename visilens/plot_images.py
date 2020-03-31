@@ -3,13 +3,14 @@ import copy
 import warnings
 from scipy.fftpack import fftshift,fft2
 from scipy.ndimage.measurements import center_of_mass
-import matplotlib.pyplot as pl; pl.ioff()
+import matplotlib.pyplot as plt; plt.ioff()
 import matplotlib.cm as cm
 from matplotlib.colors import SymLogNorm
-from class_utils import *
-from calc_likelihood import *
-from utils import *
-from lensing import *
+from astropy.cosmology import Planck15
+from .class_utils import *
+from .calc_likelihood import *
+from .utils import *
+from .lensing import *
 
 arcsec2rad = np.pi/180./3600.
 c = 2.99792458e8 # in m/s
@@ -59,7 +60,7 @@ def uvimageslow(visdata,imsize=256,pixsize=0.5,taper=0.):
       im = np.array(np.zeros(x.shape),dtype=complex)
 
       # Check to see if we have the conjugate visibilities, and image.
-      if np.all(thisvis.u[:thisvis.u.size/2] == -thisvis.u[thisvis.u.size/2:]):
+      if np.all(thisvis.u[:thisvis.u.size//2] == -thisvis.u[thisvis.u.size//2:]):
             for i in range(thisvis.u.size/2):
                   im += (thisvis.sigma[i]**-2)*(thisvis.real[i]+1j*thisvis.imag[i]) *\
                         np.exp(2*np.pi*1j*((thisvis.u[i]*x)+(thisvis.v[i]*y)))
@@ -77,8 +78,8 @@ def uvimageslow(visdata,imsize=256,pixsize=0.5,taper=0.):
 def plot_images(data,mcmcresult,returnimages=False,plotcombined=False,plotall=False,
                   imsize=256,pixsize=0.2,taper=0.,**kwargs):
       """
-      Create a four-panel figure from data and chains,
-      showing data, best-fit model, residuals, high-res image.
+      Create a five-panel figure from data and chains,
+      showing data, best-fit model, residuals, high-res image, source plane
 
       Inputs:
       data:
@@ -109,8 +110,8 @@ def plot_images(data,mcmcresult,returnimages=False,plotcombined=False,plotall=Fa
       If returnimages is True:
       f,axarr,imagelist:
             Same as above; imagelist is a list of length (# of datasets),
-            containing three arrays each, representing the data,
-            interpolated model, and full-resolution model.
+            containing four arrays each, representing the data,
+            interpolated model, full-resolution model, and source plane.
       """
 
       limits = kwargs.pop('limits',
@@ -136,20 +137,24 @@ def plot_images(data,mcmcresult,returnimages=False,plotcombined=False,plotall=Fa
       
       
       if plotall:
-            f,axarr = pl.subplots(len(datasets)+1,4,figsize=(14,4*(len(datasets)+1)))
+            f,axarr = plt.subplots(len(datasets)+1,5,figsize=(14,4*(len(datasets)+1)))
             axarr = np.atleast_2d(axarr)
             images = [[] for _ in range(len(datasets)+1)]
             if sourcedatamap[0] is not None: warnings.warn("sourcedatamap[0] is not None. Are you sure you want plotall=True?")
             sourcedatamap.append(None)
+            f.subplots_adjust(left=0.05,bottom=0.05,top=0.95,right=0.99)
       elif plotcombined:
-            f,axarr = pl.subplots(1,4,figsize=(12,3))
+            f,axarr = plt.subplots(1,5,figsize=(14,4))
             axarr = np.atleast_2d(axarr)
             images = [[]]
+            if sourcedatamap[0] is not None: warnings.warn("sourcedatamap[0] is not None, and has been set to None. Are you sure you want plotcombined=True? This could break the source plane plot.")
             sourcedatamap = [None]
+            f.subplots_adjust(left=0.05,bottom=0.05,top=0.95,right=0.99)
       else:
-            f,axarr = pl.subplots(len(datasets),4,figsize=(14,4*len(datasets)))
+            f,axarr = plt.subplots(len(datasets),5,figsize=(14,4*len(datasets)))
             axarr = np.atleast_2d(axarr)
             images = [[] for _ in range(len(datasets))] # effing mutable lists.
+            f.subplots_adjust(left=0.05,bottom=0.05,top=0.95,right=0.99)
             
       plotdata,plotinterp = [],[]
       
@@ -205,7 +210,7 @@ def plot_images(data,mcmcresult,returnimages=False,plotcombined=False,plotall=Fa
                   except TypeError:
                         s = float(level)
             
-            print "Data - Model rms: {0:0.3e}".format(imdiff.std())
+            print("Data - Model rms: {0:0.3e}".format(imdiff.std()))
             axarr[row,0].imshow(imdata,interpolation='nearest',extent=ext,cmap=cmap)
             axarr[row,0].contour(imdata,extent=ext,colors='k',origin='image',levels=s*mapcontours)
             axarr[row,0].set_xlim(limits[0],limits[1]); axarr[row,0].set_ylim(limits[2],limits[3])
@@ -221,22 +226,21 @@ def plot_images(data,mcmcresult,returnimages=False,plotcombined=False,plotall=Fa
             elif np.log10(s) < -3.: sig,unit = 1e6*s,'$\mu$Jy'
             elif np.log10(s) < 0.: sig,unit = 1e3*s,'mJy'
             else: sig,unit = s,'Jy'
-            axarr[row,2].text(0.1,0.1,"1$\sigma$ = {0:.1f}{1:s}".format(sig,unit),
+            axarr[row,2].text(0.05,0.05,"Data 1$\sigma$ = {0:.1f}{1:s}".format(sig,unit),
                   transform=axarr[row,2].transAxes,bbox=dict(fc='w'))
 
-            # Give a zoomed-in view in the last panel
+            # For the last two panels, give the apparent emission at higher resolution
+            # and the intrinsic source plane structure.
             # Create model image at higher res, remove unlensed sources
             src = [src for src in source if src.lensed]
             imemit,_ = create_modelimage(lens,src,xemit,yemit,xemit,yemit,\
                   [0,xemit.shape[1],0,xemit.shape[0]],sourcedatamap=sourcedatamap[row])
-
             images[row].append(imemit)
             
             xcen = center_of_mass(imemit)[1]*(xemit[0,1]-xemit[0,0]) + xemit.min()
             ycen = -center_of_mass(imemit)[0]*(xemit[0,1]-xemit[0,0]) + yemit.max()
             dx = 0.5*(xemit.max()-xemit.min())
-            dy = 0.5*(yemit.max()-yemit.min())
-            
+            dy = 0.5*(yemit.max()-yemit.min())           
             
             if logmodel: norm=SymLogNorm(0.01*imemit.max()) #imemit = np.log10(imemit); vmin = imemit.min()-2.
             else: norm=None #vmin = imemit.min()
@@ -244,6 +248,32 @@ def plot_images(data,mcmcresult,returnimages=False,plotcombined=False,plotall=Fa
                   extent=[xemit.min(),xemit.max(),yemit.min(),yemit.max()],cmap=cmap,norm=norm)
             
             axarr[row,3].set_xlim(xcen-dx,xcen+dx); axarr[row,3].set_ylim(ycen-dy,ycen+dy)
+            
+            # And create source plane using the exact grids the code used during fitting.
+            imsource = np.zeros(xemit.shape)
+            for s in src: imsource += SourceProfile(xemit,yemit,s,lens)*(xemit[0,1]-xemit[0,0])**2.            
+            images[row].append(imsource)
+            
+            xcen = center_of_mass(imsource)[1]*(xemit[0,1]-xemit[0,0]) + xemit.min()
+            ycen = -center_of_mass(imemit)[0]*(xemit[0,1]-xemit[0,0]) + yemit.max()
+            dx = 0.5*(xemit.max()-xemit.min())
+            dy = 0.5*(yemit.max()-yemit.min())
+            
+            axarr[row,4].imshow(imsource,interpolation='nearest',
+                extent=[xemit.min(),xemit.max(),yemit.min(),yemit.max()],cmap=cmap,
+                norm=SymLogNorm(0.01*imsource.max()),origin='lower')
+            
+            axarr[row,4].set_xlim(xcen-dx,xcen+dx); axarr[row,4].set_ylim(ycen-dy,ycen+dy)
+            
+            # Need to precalculate distances to get caustics
+            Dd = Planck15.angular_diameter_distance(lens[0].z).value
+            Ds = Planck15.angular_diameter_distance(source[0].z).value
+            Dds= Planck15.angular_diameter_distance_z1z2(lens[0].z,source[0].z).value
+            caustics = get_caustics(lens,Dd,Ds,Dds,
+                highresbox=mcmcresult['highresbox'],numres=mcmcresult['emitres'])
+            for caustic in caustics:
+                axarr[row,3].plot(caustic[:,0],caustic[:,1],ls='-',marker='',lw=1,color='r')
+                axarr[row,4].plot(caustic[:,0],caustic[:,1],ls='-',marker='',lw=1,color='r')
             
             s = imdiff.std()
             if np.log10(s) < -6.: sig,unit = 1e9*s,'nJy'
@@ -254,9 +284,10 @@ def plot_images(data,mcmcresult,returnimages=False,plotcombined=False,plotall=Fa
             # Label some axes and such
             axarr[row,0].set_title(plotdata[row].filename+'\nDirty Image')
             axarr[row,1].set_title('Model Dirty Image')
-            axarr[row,2].set_title('Residuals - {0:.1f}{1:s} rms'.format(sig,unit))
+            axarr[row,2].set_title('Residual Map rms={0:.1f}{1:s}'.format(sig,unit))
             if logmodel: axarr[row,3].set_title('High-res Model (log-scale)')
             else: axarr[row,3].set_title('High-res Model')
+            axarr[row,4].set_title('Source Plane Model')
             
       
 
