@@ -2,6 +2,7 @@ __all__ = ['Visdata','SersicSource','GaussSource','PointSource','SIELens','Exter
             'read_visdata','concatvis','bin_visibilities']
 
 import numpy as np
+import os
 import astropy.constants as co
 import warnings
 from .utils import cart2pol,pol2cart
@@ -126,6 +127,31 @@ class Visdata(object):
             self.sigma = sigma
             self.ant1 = ant1
             self.ant2 = ant2
+      
+      def to_binfile(self,filename,overwrite=False):
+          """
+          Write out the visibility data to a .bin file that can then be read by
+          vl.read_visdata.
+          
+          filename: string
+          File to write out to. Will have '.bin' appended to it if not already given.
+          
+          overwrite: boolean
+          If filename already exists and overwrite=False, will not overwrite existing file.
+          """
+          
+          allarr = np.vstack((self.u,self.v,self.real,self.imag,self.sigma,self.ant1,self.ant2))
+          
+          if not filename[-4:] == '.bin': filename += '.bin'
+          
+          if os.path.isfile(filename) and not overwrite:
+              raise IOError('filename {0:s} exists and overwrite=False; '\
+                  'use visdata.to_binfile(filename,overwrite=True) to overwrite')
+          
+          with open(filename,'wb') as f:
+              allarr.tofile(f)
+              f.write(self.PBfwhm)
+        
 
 class SIELens(object):
       """
