@@ -254,8 +254,8 @@ def SourceProfile(xsource,ysource,source,lens):
       
       elif source.__class__.__name__=='PointSource':
             if source.lensed:# and len(lens)==1:
-                  xs = source.xoff['value'] + lens[0].x['value']
-                  ys = source.yoff['value'] + lens[0].y['value']
+                  #xs = source.xoff['value'] + lens[0].x['value']
+                  #ys = source.yoff['value'] + lens[0].y['value']
                   return ValueError("Lensed point sources not working yet... try a"\
                    "gaussian with small width instead...")
             else:
