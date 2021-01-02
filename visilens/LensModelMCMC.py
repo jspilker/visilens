@@ -13,7 +13,7 @@ from .calc_likelihood import calc_vis_lnlike
 arcsec2rad = np.pi/180/3600
 
 def LensModelMCMC(data,lens,source,
-                  xmax=30.,highresbox=[-3.,3.,-3.,3.],emitres=None,fieldres=None,
+                  xmax=10.,highresbox=[-2.,2.,-2.,2.],emitres=None,fieldres=None,
                   sourcedatamap=None, scaleamp=False, shiftphase=False,
                   modelcal=True,cosmo=Planck15,
                   nwalkers=1e3,nburn=1e3,nstep=1e3,pool=None,nthreads=1,mpirun=False):
